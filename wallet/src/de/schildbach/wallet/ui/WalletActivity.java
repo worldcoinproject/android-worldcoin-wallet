@@ -727,24 +727,10 @@ public final class WalletActivity extends AbstractOnDemandServiceActivity
 	private void versionAlert(final int serverVersionCode)
 	{
 		final PackageManager pm = getPackageManager();
-		final Intent marketIntent = new Intent(Intent.ACTION_VIEW, Uri.parse(String.format(Constants.MARKET_APP_URL, getPackageName())));
 		final Intent binaryIntent = new Intent(Intent.ACTION_VIEW, Uri.parse(Constants.BINARY_URL));
 
 		final DialogBuilder dialog = DialogBuilder.warn(this, R.string.wallet_version_dialog_title);
 		dialog.setMessage(getString(R.string.wallet_version_dialog_msg));
-
-		if (pm.resolveActivity(marketIntent, 0) != null)
-		{
-			dialog.setPositiveButton(R.string.wallet_version_dialog_button_market, new DialogInterface.OnClickListener()
-			{
-				@Override
-				public void onClick(final DialogInterface dialog, final int id)
-				{
-					startActivity(marketIntent);
-					finish();
-				}
-			});
-		}
 
 		if (pm.resolveActivity(binaryIntent, 0) != null)
 		{
@@ -915,7 +901,7 @@ public final class WalletActivity extends AbstractOnDemandServiceActivity
 		final Intent intent = new Intent(Intent.ACTION_SEND);
 		intent.putExtra(Intent.EXTRA_SUBJECT, getString(R.string.export_keys_dialog_mail_subject));
 		intent.putExtra(Intent.EXTRA_TEXT,
-				getString(R.string.export_keys_dialog_mail_text) + "\n\n" + String.format(Constants.WEBMARKET_APP_URL, getPackageName()) + "\n\n"
+				getString(R.string.export_keys_dialog_mail_text) + "\n\n"
 						+ Constants.SOURCE_URL + '\n');
 		intent.setType("x-bitcoin/private-keys");
 		intent.putExtra(Intent.EXTRA_STREAM, Uri.fromFile(file));
