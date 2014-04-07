@@ -55,6 +55,7 @@ import com.actionbarsherlock.view.MenuInflater;
 import com.actionbarsherlock.view.MenuItem;
 import com.google.bitcoin.core.Address;
 import com.google.bitcoin.core.Wallet;
+import com.google.bitcoin.protocols.payments.PaymentProtocol;
 import com.google.bitcoin.uri.BitcoinURI;
 
 import de.schildbach.wallet.Configuration;
@@ -66,7 +67,6 @@ import de.schildbach.wallet.offline.AcceptBluetoothService;
 import de.schildbach.wallet.util.BitmapFragment;
 import de.schildbach.wallet.util.Bluetooth;
 import de.schildbach.wallet.util.Nfc;
-import de.schildbach.wallet.util.PaymentProtocol;
 import de.schildbach.wallet.util.Qr;
 import de.schildbach.wallet_test.R;
 
@@ -433,8 +433,8 @@ public final class RequestCoinsFragment extends SherlockFragment
 	private byte[] determinePaymentRequest(final boolean includeBluetoothMac)
 	{
 		final BigInteger amount = amountCalculatorLink.getAmount();
+		final String paymentUrl = includeBluetoothMac && bluetoothMac != null ? "bt:" + bluetoothMac : null;
 
-		return PaymentProtocol.createPaymentRequest(amount, address, null, includeBluetoothMac && bluetoothMac != null ? "bt:" + bluetoothMac : null)
-				.toByteArray();
+		return PaymentProtocol.createPaymentRequest(Constants.NETWORK_PARAMETERS, amount, address, null, paymentUrl, null).build().toByteArray();
 	}
 }
