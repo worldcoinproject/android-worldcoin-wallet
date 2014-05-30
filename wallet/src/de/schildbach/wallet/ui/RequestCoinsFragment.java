@@ -17,8 +17,6 @@
 
 package de.schildbach.wallet.ui;
 
-import java.math.BigInteger;
-
 import javax.annotation.CheckForNull;
 
 import org.slf4j.Logger;
@@ -54,6 +52,7 @@ import com.actionbarsherlock.view.Menu;
 import com.actionbarsherlock.view.MenuInflater;
 import com.actionbarsherlock.view.MenuItem;
 import com.google.bitcoin.core.Address;
+import com.google.bitcoin.core.Coin;
 import com.google.bitcoin.core.Wallet;
 import com.google.bitcoin.protocols.payments.PaymentProtocol;
 import com.google.bitcoin.uri.BitcoinURI;
@@ -419,7 +418,7 @@ public final class RequestCoinsFragment extends SherlockFragment
 
 	private String determineBitcoinRequestStr(final boolean includeBluetoothMac)
 	{
-		final BigInteger amount = amountCalculatorLink.getAmount();
+		final Coin amount = amountCalculatorLink.getAmount();
 
 		final StringBuilder uri = new StringBuilder(BitcoinURI.convertToBitcoinURI(address, amount, null, null));
 		if (includeBluetoothMac && bluetoothMac != null)
@@ -432,7 +431,7 @@ public final class RequestCoinsFragment extends SherlockFragment
 
 	private byte[] determinePaymentRequest(final boolean includeBluetoothMac)
 	{
-		final BigInteger amount = amountCalculatorLink.getAmount();
+		final Coin amount = amountCalculatorLink.getAmount();
 		final String paymentUrl = includeBluetoothMac && bluetoothMac != null ? "bt:" + bluetoothMac : null;
 
 		return PaymentProtocol.createPaymentRequest(Constants.NETWORK_PARAMETERS, amount, address, null, paymentUrl, null).build().toByteArray();

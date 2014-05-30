@@ -49,6 +49,9 @@ import android.net.Uri;
 import android.preference.PreferenceManager;
 import android.provider.BaseColumns;
 import android.text.format.DateUtils;
+
+import com.google.bitcoin.core.Coin;
+
 import de.schildbach.wallet.util.GenericUtils;
 import de.schildbach.wallet.util.Io;
 
@@ -73,7 +76,7 @@ public class ExchangeRatesProvider extends ContentProvider
 		@Override
 		public String toString()
 		{
-			return getClass().getSimpleName() + '[' + currencyCode + ':' + GenericUtils.formatDebugValue(rate) + ']';
+			return getClass().getSimpleName() + '[' + currencyCode + ':' + Coin.valueOf(rate.longValue()).toPlainString() + ']';
 		}
 	}
 
@@ -309,7 +312,7 @@ public class ExchangeRatesProvider extends ContentProvider
 							{
 								try
 								{
-									final BigInteger rate = GenericUtils.parseCoin(rateStr, 0);
+									final BigInteger rate = BigInteger.valueOf((long) (Double.parseDouble(rateStr) * Coin.COIN.value));
 
 									if (rate.signum() > 0)
 									{
@@ -317,7 +320,7 @@ public class ExchangeRatesProvider extends ContentProvider
 										break;
 									}
 								}
-								catch (final ArithmeticException x)
+								catch (final NumberFormatException x)
 								{
 									log.warn("problem fetching {} exchange rate from {} ({}): {}", currencyCode, url, contentEncoding, x.getMessage());
 								}

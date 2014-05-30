@@ -19,7 +19,6 @@ package de.schildbach.wallet.ui;
 
 import java.io.FileNotFoundException;
 import java.io.InputStream;
-import java.math.BigInteger;
 import java.util.Arrays;
 
 import javax.annotation.CheckForNull;
@@ -77,6 +76,7 @@ import com.actionbarsherlock.view.MenuInflater;
 import com.actionbarsherlock.view.MenuItem;
 import com.google.bitcoin.core.Address;
 import com.google.bitcoin.core.AddressFormatException;
+import com.google.bitcoin.core.Coin;
 import com.google.bitcoin.core.ECKey;
 import com.google.bitcoin.core.NetworkParameters;
 import com.google.bitcoin.core.Sha256Hash;
@@ -776,7 +776,7 @@ public final class SendCoinsFragment extends SherlockFragment
 
 	private boolean isAmountValid()
 	{
-		final BigInteger amount = paymentIntent.mayEditAmount() ? amountCalculatorLink.getAmount() : paymentIntent.getAmount();
+		final Coin amount = paymentIntent.mayEditAmount() ? amountCalculatorLink.getAmount() : paymentIntent.getAmount();
 
 		return amount != null && amount.signum() > 0;
 	}
@@ -836,7 +836,7 @@ public final class SendCoinsFragment extends SherlockFragment
 		// final payment intent
 		final PaymentIntent finalPaymentIntent = paymentIntent.mergeWithEditedValues(amountCalculatorLink.getAmount(),
 				validatedAddress != null ? validatedAddress.address : null);
-		final BigInteger finalAmount = finalPaymentIntent.getAmount();
+		final Coin finalAmount = finalPaymentIntent.getAmount();
 
 		// prepare send request
 		final SendRequest sendRequest = finalPaymentIntent.toSendRequest();
@@ -925,14 +925,14 @@ public final class SendCoinsFragment extends SherlockFragment
 			}
 
 			@Override
-			protected void onInsufficientMoney(@Nullable final BigInteger missing)
+			protected void onInsufficientMoney(@Nullable final Coin missing)
 			{
 				state = State.INPUT;
 				updateView();
 
-				final BigInteger estimated = wallet.getBalance(BalanceType.ESTIMATED);
-				final BigInteger available = wallet.getBalance(BalanceType.AVAILABLE);
-				final BigInteger pending = estimated.subtract(available);
+				final Coin estimated = wallet.getBalance(BalanceType.ESTIMATED);
+				final Coin available = wallet.getBalance(BalanceType.AVAILABLE);
+				final Coin pending = estimated.subtract(available);
 
 				final int btcShift = config.getBtcShift();
 				final int btcPrecision = config.getBtcMaxPrecision();
@@ -980,7 +980,7 @@ public final class SendCoinsFragment extends SherlockFragment
 
 	private void handleEmpty()
 	{
-		final BigInteger available = wallet.getBalance(BalanceType.AVAILABLE);
+		final Coin available = wallet.getBalance(BalanceType.AVAILABLE);
 
 		amountCalculatorLink.setBtcAmount(available);
 
