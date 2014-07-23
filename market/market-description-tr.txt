@@ -1,21 +1,21 @@
-Bitcoin'leriniz daima cebinizde sizinle olsun! Herhangi bir QR kodunu okuyarak çabuk ödeme yapabilirsiniz. Bir tüccar olarak ödemeleri güvenilir ve anında alabilirsiniz. Bitcoin cüzdanı ilk mobil Bitcoin uygulamasıdır ve muhtemelen en güvenli Bitcoin uygulamasıdır!
+Worldcoin'leriniz daima cebinizde sizinle olsun! Herhangi bir QR kodunu okuyarak çabuk ödeme yapabilirsiniz. Bir tüccar olarak ödemeleri güvenilir ve anında alabilirsiniz. Worldcoin cüzdanı ilk mobil Worldcoin uygulamasıdır ve muhtemelen en güvenli Worldcoin uygulamasıdır!
 
 İŞLEVLERİ:
 
 • Hiçbir oturuma, web ya da bulut hizmetine gerek yoktur. Bu cüzdan merkezsiz ve eşten eşedir.
-• Bitcoin meblağlarını BTC, mBTC ve µBTC olarak göster.
-• Ulusal para birimlerine ve bu para birimlerinden dönüştürme.
-• NFC, QR kodu veya Bitcoin bağlantıları ile Bitcoin gönderir ve alır.
-• Sık kullanılan Bitcoin adresleri için adres defteri içerir.
+• Worldcoin meblağlarının WDC ve mWDC olarak gösterilmesi.
+• Dövizlere ve dövizlerden dönüştürme.
+• NFC, QR kodu veya Worldcoin bağlantıları ile Worldcoin gönderir ve alır.
+• Sık kullanılan Worldcoin adresleri için adres defteri içerir.
 • Çevrimdışı olduğunuzda Bluetooth vasıtasıyla ödemeler.
-• Alınan bitcoin'ler için sistem bildirimleri.
-• Bitcoin bakiyesini görüntüleyen widget.
+• Alınan Worldcoin'ler için sistem bildirimleri.
+• Worldcoin bakiyesini görüntüleyen widget.
 
-Bitcoin hakkında daha fazla bilgiyi şurada bulabilirsiniz:
-http://bitcoin.org
+Worldcoin hakkında daha fazla bilgiyi şurada bulabilirsiniz:
+http://Worldcoinalliance.net
 
-Bitcoin Wallet'e iştirak etmek istiyorsanız, projenin adresi şudur:
-https://github.com/schildbach/bitcoin-wallet
+Worldcoin Wallet'e iştirak etmek istiyorsanız, projenin adresi şudur:
+https://github.com/worldcoinproject/android-Worldcoin-wallet
 
 Lisans: GPLv3
 Tüm riski siz üstlenmiş olursunuz.

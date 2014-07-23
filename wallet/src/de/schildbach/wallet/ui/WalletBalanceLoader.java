@@ -18,19 +18,15 @@
 package de.schildbach.wallet.ui;
 
 import java.math.BigInteger;
-import java.util.concurrent.RejectedExecutionException;
+import java.util.List;
 
 import javax.annotation.Nonnull;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import android.content.Context;
 import android.support.v4.content.AsyncTaskLoader;
 
-import com.google.bitcoin.core.Wallet;
-import com.google.bitcoin.core.Wallet.BalanceType;
-import com.google.bitcoin.utils.Threading;
+import com.google.worldcoin.core.Wallet;
+import com.google.worldcoin.core.Wallet.BalanceType;
 
 import de.schildbach.wallet.util.ThrottlingWalletChangeListener;
 
@@ -40,8 +36,6 @@ import de.schildbach.wallet.util.ThrottlingWalletChangeListener;
 public final class WalletBalanceLoader extends AsyncTaskLoader<BigInteger>
 {
 	private final Wallet wallet;
-
-	private static final Logger log = LoggerFactory.getLogger(WalletBalanceLoader.class);
 
 	public WalletBalanceLoader(final Context context, @Nonnull final Wallet wallet)
 	{
@@ -55,7 +49,7 @@ public final class WalletBalanceLoader extends AsyncTaskLoader<BigInteger>
 	{
 		super.onStartLoading();
 
-		wallet.addEventListener(walletChangeListener, Threading.SAME_THREAD);
+		wallet.addEventListener(walletChangeListener);
 
 		forceLoad();
 	}
@@ -80,14 +74,9 @@ public final class WalletBalanceLoader extends AsyncTaskLoader<BigInteger>
 		@Override
 		public void onThrottledWalletChanged()
 		{
-			try
-			{
-				forceLoad();
-			}
-			catch (final RejectedExecutionException x)
-			{
-				log.info("rejected execution: " + WalletBalanceLoader.this.toString());
-			}
+			forceLoad();
 		}
+		
+		public void onScriptsAdded(Wallet wallet, List<com.google.worldcoin.script.Script> scripts){}
 	};
 }

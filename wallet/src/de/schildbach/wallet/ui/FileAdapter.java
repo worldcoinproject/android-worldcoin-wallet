@@ -38,19 +38,12 @@ public abstract class FileAdapter extends ArrayAdapter<File>
 	protected final Context context;
 	protected final LayoutInflater inflater;
 
-	public FileAdapter(final Context context)
+	public FileAdapter(final Context context, @Nonnull final List<File> files)
 	{
-		super(context, 0);
+		super(context, 0, files);
 
 		this.context = context;
 		inflater = LayoutInflater.from(context);
-	}
-
-	public void setFiles(@Nonnull final List<File> files)
-	{
-		clear();
-		for (final File file : files)
-			add(file);
 	}
 
 	@Override

@@ -18,73 +18,60 @@
 package de.schildbach.wallet;
 
 import java.io.File;
+import java.math.BigInteger;
 import java.nio.charset.Charset;
 
-import android.os.Build;
 import android.os.Environment;
 import android.text.format.DateUtils;
 
-import com.google.bitcoin.core.NetworkParameters;
-import com.google.bitcoin.params.MainNetParams;
-import com.google.bitcoin.params.TestNet3Params;
+import com.google.worldcoin.core.NetworkParameters;
+import com.google.worldcoin.params.MainNetParams;
+import com.google.worldcoin.params.TestNet3Params;
 
 import de.schildbach.wallet_test.R;
 
 /**
  * @author Andreas Schildbach
  */
-public final class Constants
+public class Constants
 {
-	public static final boolean TEST = R.class.getPackage().getName().contains("_test");
+	public static final boolean TEST = false; // R.class.getPackage().getName().contains("_test");
 
 	public static final NetworkParameters NETWORK_PARAMETERS = TEST ? TestNet3Params.get() : MainNetParams.get();
 	private static final String FILENAME_NETWORK_SUFFIX = NETWORK_PARAMETERS.getId().equals(NetworkParameters.ID_MAINNET) ? "" : "-testnet";
 
-	public final static class Files
-	{
-		public static final String WALLET_FILENAME_PROTOBUF = "wallet-protobuf" + FILENAME_NETWORK_SUFFIX;
+	public static final String WALLET_FILENAME = "wallet" + FILENAME_NETWORK_SUFFIX;
 
-		public static final String WALLET_KEY_BACKUP_BASE58 = "key-backup-base58" + FILENAME_NETWORK_SUFFIX;
-		public static final String WALLET_KEY_BACKUP_PROTOBUF = "key-backup-protobuf" + FILENAME_NETWORK_SUFFIX;
+	public static final String WALLET_FILENAME_PROTOBUF = "wallet-protobuf" + FILENAME_NETWORK_SUFFIX;
 
-		public static final File EXTERNAL_WALLET_BACKUP_DIR = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS);
-		public static final String EXTERNAL_WALLET_KEY_BACKUP = "bitcoin-wallet-keys" + FILENAME_NETWORK_SUFFIX;
-		public static final String EXTERNAL_WALLET_BACKUP = "bitcoin-wallet-backup" + FILENAME_NETWORK_SUFFIX;
+	public static final String WALLET_KEY_BACKUP_BASE58 = "key-backup-base58" + FILENAME_NETWORK_SUFFIX;
 
-		public static final String BLOCKCHAIN_FILENAME = "blockchain" + FILENAME_NETWORK_SUFFIX;
+	public static final File EXTERNAL_WALLET_BACKUP_DIR = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS);
+	public static final String EXTERNAL_WALLET_KEY_BACKUP = "worldcoin-wallet-keys" + FILENAME_NETWORK_SUFFIX;
 
-		public static final String CHECKPOINTS_FILENAME = "checkpoints" + FILENAME_NETWORK_SUFFIX;
-	}
+	public static final String BLOCKCHAIN_FILENAME = "blockchain" + FILENAME_NETWORK_SUFFIX;
 
-	public static final long BACKUP_MAX_CHARS = 5000000;
+	public static final String CHECKPOINTS_FILENAME = "checkpoints" + FILENAME_NETWORK_SUFFIX;
 
-	private static final String EXPLORE_BASE_URL_PROD = "https://www.biteasy.com/";
-	private static final String EXPLORE_BASE_URL_TEST = "https://www.biteasy.com/testnet/";
+	private static final String EXPLORE_BASE_URL_PROD = "https://www.worldcoinexplorer.com/";
+	private static final String EXPLORE_BASE_URL_TEST = "https://www.worldcoinexplorer.com/testnet/";
 	public static final String EXPLORE_BASE_URL = NETWORK_PARAMETERS.getId().equals(NetworkParameters.ID_MAINNET) ? EXPLORE_BASE_URL_PROD
 			: EXPLORE_BASE_URL_TEST;
 
-	private static final String BITEASY_API_URL_PROD = "https://api.biteasy.com/blockchain/v1/";
-	private static final String BITEASY_API_URL_TEST = "https://api.biteasy.com/testnet/v1/";
-	public static final String BITEASY_API_URL = NETWORK_PARAMETERS.getId().equals(NetworkParameters.ID_MAINNET) ? BITEASY_API_URL_PROD
-			: BITEASY_API_URL_TEST;
-
 	public static final String MIMETYPE_TRANSACTION = "application/x-btctx";
-	public static final String MIMETYPE_WALLET_BACKUP = "application/x-bitcoin-wallet-backup";
 
 	public static final int MAX_NUM_CONFIRMATIONS = 7;
-	public static final String USER_AGENT = "Bitcoin Wallet";
+	public static final String USER_AGENT = "Worldcoin Wallet";
 	public static final String DEFAULT_EXCHANGE_CURRENCY = "USD";
 	public static final int WALLET_OPERATION_STACK_SIZE = 256 * 1024;
 	public static final long BLOCKCHAIN_STATE_BROADCAST_THROTTLE_MS = DateUtils.SECOND_IN_MILLIS;
 	public static final long BLOCKCHAIN_UPTODATE_THRESHOLD_MS = DateUtils.HOUR_IN_MILLIS;
 
-	public static final String CURRENCY_CODE_BTC = "BTC";
-	public static final String CURRENCY_CODE_MBTC = "mBTC";
-	public static final String CURRENCY_CODE_UBTC = "µBTC";
+	public static final String CURRENCY_CODE_BTC = "WDC";
+	public static final String CURRENCY_CODE_MBTC = "mWDC";
 	public static final char CHAR_HAIR_SPACE = '\u200a';
 	public static final char CHAR_THIN_SPACE = '\u2009';
 	public static final char CHAR_ALMOST_EQUAL_TO = '\u2248';
-	public static final char CHAR_CHECKMARK = '\u2713';
 	public static final String CURRENCY_PLUS_SIGN = "+" + CHAR_THIN_SPACE;
 	public static final String CURRENCY_MINUS_SIGN = "-" + CHAR_THIN_SPACE;
 	public static final String PREFIX_ALMOST_EQUAL_TO = Character.toString(CHAR_ALMOST_EQUAL_TO) + CHAR_THIN_SPACE;
@@ -93,40 +80,49 @@ public final class Constants
 
 	public static final int BTC_MAX_PRECISION = 8;
 	public static final int MBTC_MAX_PRECISION = 5;
-	public static final int UBTC_MAX_PRECISION = 2;
 	public static final int LOCAL_PRECISION = 4;
 
-	public static final String DONATION_ADDRESS = "18CK5k1gajRKKSC7yVSTXT9LUzbheh1XY4";
-	public static final String REPORT_EMAIL = "wallet@schildbach.de";
+	public static final String DONATION_ADDRESS = "WQHZn8ei1XsHfb8dJ9hu94UpgqUjErV33F";
+	public static final String REPORT_EMAIL = "worldcoin@coinfit.info";
 	public static final String REPORT_SUBJECT_ISSUE = "Reported issue";
 	public static final String REPORT_SUBJECT_CRASH = "Crash report";
 
 	public static final String LICENSE_URL = "http://www.gnu.org/licenses/gpl-3.0.txt";
-	public static final String SOURCE_URL = "https://github.com/schildbach/bitcoin-wallet";
-	public static final String BINARY_URL = "https://github.com/schildbach/bitcoin-wallet/releases";
-	public static final String CREDITS_BITCOINJ_URL = "http://code.google.com/p/bitcoinj/";
-	public static final String CREDITS_ZXING_URL = "https://github.com/zxing/zxing";
-	public static final String CREDITS_ICON_URL = "https://bitcointalk.org/index.php?action=profile;u=2062";
+	public static final String SOURCE_URL = "https://github.com/worldcoinproject/android-worldcoin-wallet";
+	public static final String BINARY_URL = "http://code.google.com/p/worldcoin-wallet/downloads/list";
+	public static final String CREDITS_BITCOINJ_URL = "http://code.google.com/p/worldcoinj/";
+	public static final String CREDITS_ZXING_URL = "http://code.google.com/p/zxing/";
+	public static final String CREDITS_ICON_URL = "http://www.worldcoinalliance.net/merchant-tools-worldcoin/";
 	public static final String AUTHOR_TWITTER_URL = "https://twitter.com/#!/bitcoin_wallet";
-	public static final String AUTHOR_GOOGLEPLUS_URL = "https://profiles.google.com/andreas.schildbach";
+	public static final String AUTHOR_GOOGLEPLUS_URL = "https://plus.google.com/108714008949222769086/";
 	public static final String COMMUNITY_GOOGLEPLUS_URL = "https://plus.google.com/communities/105515929887248493912";
 	public static final String MARKET_APP_URL = "market://details?id=%s";
 	public static final String WEBMARKET_APP_URL = "https://play.google.com/store/apps/details?id=%s";
-	public static final String MARKET_PUBLISHER_URL = "market://search?q=pub:\"Andreas Schildbach\"";
+	public static final String MARKET_PUBLISHER_URL = "market://search?q=pub:\"Pierre-Louis Constantin\"";
 
-	public static final String VERSION_URL = "http://wallet.schildbach.de/version";
+	public static final String VERSION_URL = "http://coinfit.info/worldcoin/androidwallet/androidversion";
 	public static final int HTTP_TIMEOUT_MS = 15 * (int) DateUtils.SECOND_IN_MILLIS;
+
+	public static final String PREFS_KEY_LAST_VERSION = "last_version";
+	public static final String PREFS_KEY_LAST_USED = "last_used";
+	public static final String PREFS_KEY_BEST_CHAIN_HEIGHT_EVER = "best_chain_height_ever";
+	public static final String PREFS_KEY_ALERT_OLD_SDK_DISMISSED = "alert_old_sdk_dismissed";
+	public static final String PREFS_KEY_REMIND_BACKUP = "remind_backup";
+
+	public static final String PREFS_KEY_CONNECTIVITY_NOTIFICATION = "connectivity_notification";
+	public static final String PREFS_KEY_SELECTED_ADDRESS = "selected_address";
+	public static final String PREFS_KEY_EXCHANGE_CURRENCY = "exchange_currency";
+	public static final String PREFS_KEY_TRUSTED_PEER = "trusted_peer";
+	public static final String PREFS_KEY_TRUSTED_PEER_ONLY = "trusted_peer_only";
+	public static final String PREFS_KEY_LABS_BLUETOOTH_OFFLINE_TRANSACTIONS = "labs_bluetooth_offline_transactions";
+	public static final String PREFS_KEY_BTC_PRECISION = "btc_precision";
+	public static final String PREFS_DEFAULT_BTC_PRECISION = "4";
+	public static final String PREFS_KEY_DISCLAIMER = "disclaimer";
 
 	public static final long LAST_USAGE_THRESHOLD_JUST_MS = DateUtils.HOUR_IN_MILLIS;
 	public static final long LAST_USAGE_THRESHOLD_RECENTLY_MS = 2 * DateUtils.DAY_IN_MILLIS;
 
 	public static final int SDK_JELLY_BEAN = 16;
-	public static final int SDK_JELLY_BEAN_MR2 = 18;
-
-	public static final int SDK_DEPRECATED_BELOW = Build.VERSION_CODES.ICE_CREAM_SANDWICH;
-
-	public static final boolean BUG_OPENSSL_HEARTBLEED = Build.VERSION.SDK_INT == Constants.SDK_JELLY_BEAN
-			&& Build.VERSION.RELEASE.startsWith("4.1.1");
 
 	public static final int MEMORY_CLASS_LOWEND = 48;
 

@@ -1,21 +1,21 @@
-Porta i tuoi Bitcoin sempre con te, in tasca! Paghi velocemente scansionando un QR-code. Come un commerciante, riceverai i pagamenti sicuri e istantanei. Bitcoin Wallet è la prima Bitcoin app mobile, e probabilmente anche la più sicura!
+Porta i tuoi Worldcoin sempre con te, in tasca! Paghi velocemente scansionando un QR-code. Come un commerciante, riceverai i pagamenti sicuri e istantanei. Worldcoin Wallet è la prima Worldcoin app mobile, e probabilmente anche la più sicura!
 
 CARATTERISTICHE:
 
 • Non è necessaria alcuna registrazione, servizio web o cloud! Questo portafoglio è de-centralizzato e peer to peer.
-• Mostra l'ammontare di Bitcoin in BTC, mBTC e µBTC.
+• Mostra l'ammontare di Worldcoin in BTC e mBTC.
 • Conversione verso e dalle monete nazionali.
-• Invio e ricevimento di Bitcoin tramite NFC, codici QR o URL Bitcoin.
-• Rubrica degli indirizzi per usare indirizzi Bitcoin regolarmente.
+• Invio e ricevimento di Worldcoin tramite NFC, codici QR o URL Worldcoin.
+• Rubrica degli indirizzi per usare indirizzi Worldcoin regolarmente.
 • Quando sei offline, puoi comunque ancora pagare via Bluetooth.
 • Sistema di notifica per le monete ricevute.
-• App Widget per il saldo Bitcoin
+• App Widget per il saldo Worldcoin
 
-Puoi trovare altri dettagli su Bitcoin su
-http://bitcoin.org
+Puoi trovare altri dettagli su Worldcoin su
+http://Worldcoinalliance.net
 
-Se vuoi contribuire a Bitcoin Wallet, il progetto si trova su
-https://github.com/schildbach/bitcoin-wallet
+Se vuoi contribuire a Worldcoin Wallet, il progetto si trova su
+https://github.com/worldcoinproject/android-Worldcoin-wallet
 
 Licenza: GPLv3
 Usalo a tuo rischio!

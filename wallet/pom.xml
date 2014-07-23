@@ -6,22 +6,14 @@
 
 	<artifactId>wallet</artifactId>
 	<packaging>apk</packaging>
-	<version>3.52-test</version>
-	<name>Bitcoin Wallet</name>
+	<version>1.0</version>
+	<name>Worldcoin Wallet</name>
 
 	<parent>
 		<groupId>de.schildbach.wallet</groupId>
 		<artifactId>base</artifactId>
-		<version>1</version>
+		<version>150</version>
 	</parent>
-
-	<licenses>
-		<license>
-			<name>GNU General Public License</name>
-			<url>http://www.gnu.org/licenses/gpl.txt</url>
-			<distribution>repo</distribution>
-		</license>
-	</licenses>
 
 	<dependencies>
 
@@ -57,60 +49,46 @@
 			<type>apklib</type>
 		</dependency>
 
-		<!-- com.google.bitcoin.* -->
+		<!-- com.google.worldcoin.* -->
 		<dependency>
 			<groupId>com.google</groupId>
-			<artifactId>bitcoinj</artifactId>
-			<version>0.11.3</version>
+			<artifactId>worldcoinj</artifactId>
+			<version>0.11-SNAPSHOT</version>
 		</dependency>
 
 		<!-- de.schildbach.wallet.integration.android.* -->
 		<dependency>
 			<groupId>de.schildbach.wallet</groupId>
 			<artifactId>integration-android</artifactId>
-			<version>2.0</version>
-		</dependency>
-
-		<!-- com.google.protobuf.* -->
-		<dependency>
-			<groupId>com.google.protobuf</groupId>
-			<artifactId>protobuf-java</artifactId>
-			<version>2.5.0</version>
-		</dependency>
-
-		<!-- com.google.common.* -->
-		<dependency>
-			<groupId>com.google.guava</groupId>
-			<artifactId>guava</artifactId>
-			<version>16.0.1</version>
+			<version>1.0</version>
 		</dependency>
 
 		<!-- com.google.zxing.* -->
 		<dependency>
 			<groupId>com.google.zxing</groupId>
 			<artifactId>core</artifactId>
-			<version>3.1.0</version>
+			<version>2.2</version>
 		</dependency>
 
 		<!-- org.slf4j.* -->
 		<dependency>
 			<groupId>org.slf4j</groupId>
 			<artifactId>slf4j-api</artifactId>
-			<version>1.7.6</version>
+			<version>1.7.5</version>
 		</dependency>
 
 		<!-- ch.qos.logback.classic.* -->
 		<dependency>
 			<groupId>com.github.tony19</groupId>
 			<artifactId>logback-android-classic</artifactId>
-			<version>1.1.1-1</version>
+			<version>1.0.10-2</version>
 		</dependency>
 
 		<!-- ch.qos.logback.core.* -->
 		<dependency>
 			<groupId>com.github.tony19</groupId>
 			<artifactId>logback-android-core</artifactId>
-			<version>1.1.1-1</version>
+			<version>1.0.10-2</version>
 		</dependency>
 
 		<!-- javax.annotation.* -->
@@ -155,14 +133,6 @@
 	<build>
 		<sourceDirectory>src</sourceDirectory>
 		<testSourceDirectory>test</testSourceDirectory>
-		<testResources>
-			<testResource>
-				<directory>test</directory>
-				<excludes>
-					<exclude>**/*.java</exclude>
-				</excludes>
-			</testResource>
-		</testResources>
 		<plugins>
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>

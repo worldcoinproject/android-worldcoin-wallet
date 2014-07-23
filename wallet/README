@@ -1,30 +1,35 @@
 FILES
 
-Your wallet contains your private keys and various transaction related metadata. It is stored in app-private
-storage:
+Your wallet and your private keys are stored in app internal storage:
 
-	Mainnet: /data/data/de.schildbach.wallet/files/wallet-protobuf (MODE_PRIVATE)
+/data/data/de.schildbach.wallet/files/wallet-protobuf (MODE_PRIVATE)
+	Wallet for Mainnet
 
-	Testnet: /data/data/de.schildbach.wallet_test/files/wallet-protobuf-testnet (MODE_WORLD_READABLE | MODE_WORLD_WRITEABLE)
+/data/data/de.schildbach.wallet_test/files/wallet-protobuf-testnet (MODE_WORLD_READABLE | MODE_WORLD_WRITEABLE)
+	Wallet for Testnet
 
 The wallet file format is not compatible to wallet.dat (Satoshi client). Rather, it uses a custom protobuf format
 which should be compatible between clients using bitcoinj.
 
-Certain actions cause automatic rolling backups of your wallet to app-private storage:
+Certain actions cause automatic rolling backups of your private keys to app-private storage:
 
-	Mainnet: /data/data/de.schildbach.wallet/files/key-backup-protobuf (MODE_PRIVATE)
+/data/data/de.schildbach.wallet/files/key-backup-base58 (MODE_PRIVATE)
+	Automatic backups of private keys for Mainnet
 
-	Testnet: /data/data/de.schildbach.wallet_test/files/key-backup-protobuf-testnet (MODE_PRIVATE)
+/data/data/de.schildbach.wallet_test/files/key-backup-base58-testnet (MODE_PRIVATE)
+	Automatic backups of private keys for Testnet
 
-Your wallet can be manually backed up to and restored from external storage:
+Private keys can be manually backed up to and restored from external storage:
 
-	Mainnet: /sdcard/Download/bitcoin-wallet-backup-<yyyy-MM-dd>
+/sdcard/Download/bitcoin-wallet-keys-<yyyy-MM-dd>
+	Manual backups of private keys for Mainnet
 
-	Testnet: /sdcard/Download/bitcoin-wallet-backup-testnet-<yyyy-MM-dd>
+/sdcard/Download/bitcoin-wallet-keys-testnet-<yyyy-MM-dd>
+	Manual backups of private keys for Testnet
 
-The manual backup files are encrypted using your chosen backup password. You can use OpenSSL to decrypt:
+The manual backup files are encrypted using your chosen password. You can use OpenSSL to decrypt:
 
-	openssl enc -d -aes-256-cbc -a -in <filename>
+openssl enc -d -aes-256-cbc -a -in <filename>
 
 
 DEBUGGING
@@ -48,14 +53,11 @@ is world readable/writeable. The goal is to be able to debug easily.
 
 You can probably skip some steps, especially if you built Android apps before.
 
-You'll need git, a Java SDK 6 (or later) and Maven 3.0.4 for this. I'll assume Ubuntu Linux for
-the package installs.
+You'll need git, a Java SDK 6 (or later) and at least Maven 3 for this. I'll assume Ubuntu Linux
+for the package installs.
 
 	# first time only
 	sudo apt-get install git maven openjdk-6-jdk
-
-If you want to use Maven 3.1.0 or later, you need edit pom.xml to use android-maven-plugin version
-3.8.2 or later.
 
 Get the Android SDK Tools from
 
@@ -67,6 +69,13 @@ and unpack it to your workspace directory. Switch to that Android SDK directory,
 	tools/android update sdk --no-ui --force --filter platform,platform-tools
 
 to download the necessary API level.
+
+Next, you need to build bitcoinj. In your workspace, use
+
+	# first time only
+	git clone -b release-0.10 https://code.google.com/r/bitcoinj/ bitcoinj
+	cd bitcoinj
+	mvn clean install
 
 Finally, you can build Bitcoin Wallet and sign it with your development key. Again in your workspace,
 use
@@ -107,7 +116,7 @@ separate 'prod' branch that gets rebased against master with each released versi
 
 SETTING UP FOR DEVELOPMENT
 
-Make sure you've got Eclipse Kepler with ADT 22 installed.
+Make sure you've got Eclipse 3.7 (Indigo) with ADT 20 installed.
 
 Use Git to check out the project and an Android library dependency to your workspace:
 
@@ -122,7 +131,7 @@ Use Git to check out the project and an Android library dependency to your works
 Use the maven-eclipse-plugin to create Eclipse project files:
 
 	cd bitcoin-wallet
-	mvn clean install eclipse:eclipse
+	mvn eclipse:eclipse
 
 Optional: In the generated .classpath, remove the org.eclipse.jdt.launching.JRE_CONTAINER
 classpath entry. It does not belong there, but cannot be excluded from being generated currently.
@@ -131,35 +140,6 @@ In Eclipse, use File -> Import -> General -> Existing Project into Workspace to 
 
 If you see loads of "should be tagged with @Override" errors, set Project -> Properties ->
 Java Compiler -> Errors/Warnings -> Annotations -> Missing @Override annotation to 'Warning'
-
-
-TRANSLATIONS
-
-The source language is English. Translations for all languages except German happen on Transifex:
-
-	https://www.transifex.com/projects/p/bitcoin-wallet/
-
-The english resources are pushed to Transifex. Changes are pulled and committed to the git
-repository from time to time. It can be done by manually downloading the files, but using the "tx"
-command line client is more convenient:
-
-	# first time only
-	sudo apt-get install transifex-client
-
-If strings resources are added or changed, the source language files need to be pushed to
-Transifex. This step will probably only be executed by the maintainer of the project, as special
-permission is needed:
-
-	# push source files to Transifex
-	tx push -s
-
-As soon as a translation is ready, it can be pulled:
-
-	# pull translation from Transifex
-	tx pull -f -l <language code>
-
-Note that after pulling, any bugs introduced by either translators or Transifex itself need to be
-corrected manually.
 
 
 NFC (Near field communication)

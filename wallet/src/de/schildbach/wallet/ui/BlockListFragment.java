@@ -23,12 +23,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.RejectedExecutionException;
 
 import javax.annotation.Nonnull;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import android.app.Activity;
 import android.content.BroadcastReceiver;
@@ -37,9 +33,11 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.ServiceConnection;
+import android.content.SharedPreferences;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.IBinder;
+import android.preference.PreferenceManager;
 import android.support.v4.app.LoaderManager;
 import android.support.v4.app.LoaderManager.LoaderCallbacks;
 import android.support.v4.content.AsyncTaskLoader;
@@ -56,13 +54,12 @@ import com.actionbarsherlock.view.ActionMode;
 import com.actionbarsherlock.view.Menu;
 import com.actionbarsherlock.view.MenuInflater;
 import com.actionbarsherlock.view.MenuItem;
-import com.google.bitcoin.core.Block;
-import com.google.bitcoin.core.Sha256Hash;
-import com.google.bitcoin.core.StoredBlock;
-import com.google.bitcoin.core.Transaction;
-import com.google.bitcoin.core.Wallet;
+import com.google.worldcoin.core.Block;
+import com.google.worldcoin.core.Sha256Hash;
+import com.google.worldcoin.core.StoredBlock;
+import com.google.worldcoin.core.Transaction;
+import com.google.worldcoin.core.Wallet;
 
-import de.schildbach.wallet.Configuration;
 import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet.service.BlockchainService;
@@ -77,9 +74,9 @@ public final class BlockListFragment extends SherlockListFragment
 {
 	private AbstractWalletActivity activity;
 	private WalletApplication application;
-	private Configuration config;
 	private Wallet wallet;
 	private LoaderManager loaderManager;
+	private SharedPreferences prefs;
 
 	private BlockchainService service;
 
@@ -91,8 +88,6 @@ public final class BlockListFragment extends SherlockListFragment
 
 	private static final int MAX_BLOCKS = 32;
 
-	private static final Logger log = LoggerFactory.getLogger(BlockListFragment.class);
-
 	@Override
 	public void onAttach(final Activity activity)
 	{
@@ -100,9 +95,9 @@ public final class BlockListFragment extends SherlockListFragment
 
 		this.activity = (AbstractWalletActivity) activity;
 		this.application = this.activity.getWalletApplication();
-		this.config = application.getConfiguration();
 		this.wallet = application.getWallet();
 		this.loaderManager = getLoaderManager();
+		this.prefs = PreferenceManager.getDefaultSharedPreferences(activity);
 	}
 
 	@Override
@@ -304,8 +299,9 @@ public final class BlockListFragment extends SherlockListFragment
 
 			if (transactions != null)
 			{
-				final int btcPrecision = config.getBtcPrecision();
-				final int btcShift = config.getBtcShift();
+				final String precision = prefs.getString(Constants.PREFS_KEY_BTC_PRECISION, Constants.PREFS_DEFAULT_BTC_PRECISION);
+				final int btcPrecision = precision.charAt(0) - '0';
+				final int btcShift = precision.length() == 3 ? precision.charAt(2) - '0' : 0;
 
 				transactionsAdapter.setPrecision(btcPrecision, btcShift);
 
@@ -379,14 +375,7 @@ public final class BlockListFragment extends SherlockListFragment
 			@Override
 			public void onReceive(final Context context, final Intent intent)
 			{
-				try
-				{
-					forceLoad();
-				}
-				catch (final RejectedExecutionException x)
-				{
-					log.info("rejected execution: " + BlockLoader.this.toString());
-				}
+				forceLoad();
 			}
 		};
 	}

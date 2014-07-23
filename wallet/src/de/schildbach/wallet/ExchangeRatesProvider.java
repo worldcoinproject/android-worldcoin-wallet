@@ -19,7 +19,6 @@ package de.schildbach.wallet;
 
 import java.io.BufferedInputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.Reader;
 import java.math.BigInteger;
@@ -31,7 +30,6 @@ import java.util.Iterator;
 import java.util.Locale;
 import java.util.Map;
 import java.util.TreeMap;
-import java.util.zip.GZIPInputStream;
 
 import javax.annotation.CheckForNull;
 import javax.annotation.Nonnull;
@@ -42,11 +40,9 @@ import org.slf4j.LoggerFactory;
 
 import android.content.ContentProvider;
 import android.content.ContentValues;
-import android.content.Context;
 import android.database.Cursor;
 import android.database.MatrixCursor;
 import android.net.Uri;
-import android.preference.PreferenceManager;
 import android.provider.BaseColumns;
 import android.text.format.DateUtils;
 import de.schildbach.wallet.util.GenericUtils;
@@ -55,12 +51,10 @@ import de.schildbach.wallet.util.Io;
 /**
  * @author Andreas Schildbach
  */
-public class ExchangeRatesProvider extends ContentProvider
-{
-	public static class ExchangeRate
-	{
-		public ExchangeRate(@Nonnull final String currencyCode, @Nonnull final BigInteger rate, final String source)
-		{
+public class ExchangeRatesProvider extends ContentProvider {
+	public static class ExchangeRate {
+		public ExchangeRate(@Nonnull final String currencyCode,
+				@Nonnull final BigInteger rate, @Nonnull final String source) {
 			this.currencyCode = currencyCode;
 			this.rate = rate;
 			this.source = source;
@@ -71,285 +65,317 @@ public class ExchangeRatesProvider extends ContentProvider
 		public final String source;
 
 		@Override
-		public String toString()
-		{
-			return getClass().getSimpleName() + '[' + currencyCode + ':' + GenericUtils.formatDebugValue(rate) + ']';
+		public String toString() {
+			return getClass().getSimpleName()
+					+ '['
+					+ currencyCode
+					+ ':'
+					+ GenericUtils.formatValue(rate,
+							Constants.BTC_MAX_PRECISION, 0) + ']';
 		}
 	}
 
-	public static final String KEY_CURRENCY_CODE = "currency_code";
-	private static final String KEY_RATE = "rate";
-	private static final String KEY_SOURCE = "source";
-
-	public static final String QUERY_PARAM_Q = "q";
-
-	private Configuration config;
-	private String userAgent;
+	public static final String KEY_CURRENCY_CODE = "wdc//";
+	private static final String KEY_RATE = "price"; // rate
+	private static final String KEY_SOURCE = "best_market"; // source
 
 	@CheckForNull
 	private Map<String, ExchangeRate> exchangeRates = null;
 	private long lastUpdated = 0;
 
 	private static final URL BITCOINAVERAGE_URL;
-	private static final String[] BITCOINAVERAGE_FIELDS = new String[] { "24h_avg", "last" };
-	private static final String BITCOINAVERAGE_SOURCE = "BitcoinAverage.com";
-	private static final URL BLOCKCHAININFO_URL;
-	private static final String[] BLOCKCHAININFO_FIELDS = new String[] { "15m" };
-	private static final String BLOCKCHAININFO_SOURCE = "blockchain.info";
+	private static final String[] BITCOINAVERAGE_FIELDS = new String[] { "[WDC_"
+			+ KEY_CURRENCY_CODE + "]" };
+	// private static final URL BITCOINCHARTS_URL;
+	// private static final String[] BITCOINCHARTS_FIELDS = new String[] {
+	// "24h", "7d", "30d" };
+	// private static final URL BLOCKCHAININFO_URL;
+	// private static final String[] BLOCKCHAININFO_FIELDS = new String[] {
+	// "15m" };
 
 	// https://bitmarket.eu/api/ticker
 
-	static
-	{
-		try
-		{
-			BITCOINAVERAGE_URL = new URL("https://api.bitcoinaverage.com/custom/abw");
-			BLOCKCHAININFO_URL = new URL("https://blockchain.info/ticker");
-		}
-		catch (final MalformedURLException x)
-		{
+	static {
+		try {
+			// BITCOINAVERAGE_URL = new
+			// URL("https://api.bitcoinaverage.com/ticker/all");
+			BITCOINAVERAGE_URL = new URL(
+					"https://www.cryptocoincharts.info/v2/coins/show/wdc"); // http://www.cryptocoincharts.info/v2/api/tradingPair/");
+			// BITCOINCHARTS_URL = new URL("");
+			// ///http://api.bitcoincharts.com/v1/weighted_prices.json");
+			// BLOCKCHAININFO_URL = new URL("");
+			// //https://blockchain.info/ticker");
+		} catch (final MalformedURLException x) {
 			throw new RuntimeException(x); // cannot happen
 		}
 	}
 
 	private static final long UPDATE_FREQ_MS = 10 * DateUtils.MINUTE_IN_MILLIS;
 
-	private static final Logger log = LoggerFactory.getLogger(ExchangeRatesProvider.class);
+	private static final Logger log = LoggerFactory
+			.getLogger(ExchangeRatesProvider.class);
 
 	@Override
-	public boolean onCreate()
-	{
-		final Context context = getContext();
-
-		this.config = new Configuration(PreferenceManager.getDefaultSharedPreferences(context));
-
-		this.userAgent = WalletApplication.httpUserAgent(WalletApplication.packageInfoFromContext(context).versionName);
-
-		final ExchangeRate cachedExchangeRate = config.getCachedExchangeRate();
-		if (cachedExchangeRate != null)
-		{
-			exchangeRates = new TreeMap<String, ExchangeRate>();
-			exchangeRates.put(cachedExchangeRate.currencyCode, cachedExchangeRate);
-		}
-
+	public boolean onCreate() {
 		return true;
 	}
 
-	public static Uri contentUri(@Nonnull final String packageName)
-	{
+	public static Uri contentUri(@Nonnull final String packageName) {
 		return Uri.parse("content://" + packageName + '.' + "exchange_rates");
 	}
 
 	@Override
-	public Cursor query(final Uri uri, final String[] projection, final String selection, final String[] selectionArgs, final String sortOrder)
-	{
+	public Cursor query(final Uri uri, final String[] projection,
+			final String selection, final String[] selectionArgs,
+			final String sortOrder) {
 		final long now = System.currentTimeMillis();
 
-		if (lastUpdated == 0 || now - lastUpdated > UPDATE_FREQ_MS)
-		{
+		if (exchangeRates == null || now - lastUpdated > UPDATE_FREQ_MS) {
 			Map<String, ExchangeRate> newExchangeRates = null;
 			if (newExchangeRates == null)
-				newExchangeRates = requestExchangeRates(BITCOINAVERAGE_URL, userAgent, BITCOINAVERAGE_SOURCE, BITCOINAVERAGE_FIELDS);
-			if (newExchangeRates == null)
-				newExchangeRates = requestExchangeRates(BLOCKCHAININFO_URL, userAgent, BLOCKCHAININFO_SOURCE, BLOCKCHAININFO_FIELDS);
+				newExchangeRates = requestExchangeRatesCCC(BITCOINAVERAGE_URL,
+						BITCOINAVERAGE_FIELDS);
+			/*
+			 * if (newExchangeRates == null) newExchangeRates =
+			 * requestExchangeRates(BITCOINCHARTS_URL, BITCOINCHARTS_FIELDS); if
+			 * (newExchangeRates == null) newExchangeRates =
+			 * requestExchangeRates(BLOCKCHAININFO_URL, BLOCKCHAININFO_FIELDS);
+			 */
 
-			if (newExchangeRates != null)
-			{
+			if (newExchangeRates != null) {
 				exchangeRates = newExchangeRates;
 				lastUpdated = now;
-
-				final ExchangeRate exchangeRateToCache = bestExchangeRate(config.getExchangeCurrencyCode());
-				if (exchangeRateToCache != null)
-					config.setCachedExchangeRate(exchangeRateToCache);
 			}
 		}
 
 		if (exchangeRates == null)
 			return null;
 
-		final MatrixCursor cursor = new MatrixCursor(new String[] { BaseColumns._ID, KEY_CURRENCY_CODE, KEY_RATE, KEY_SOURCE });
+		final MatrixCursor cursor = new MatrixCursor(new String[] {
+				BaseColumns._ID, KEY_CURRENCY_CODE, KEY_RATE, KEY_SOURCE });
 
-		if (selection == null)
-		{
-			for (final Map.Entry<String, ExchangeRate> entry : exchangeRates.entrySet())
-			{
+		if (selection == null) {
+			for (final Map.Entry<String, ExchangeRate> entry : exchangeRates
+					.entrySet()) {
 				final ExchangeRate rate = entry.getValue();
-				cursor.newRow().add(rate.currencyCode.hashCode()).add(rate.currencyCode).add(rate.rate.longValue()).add(rate.source);
+				cursor.newRow().add(rate.currencyCode.hashCode())
+						.add(rate.currencyCode).add(rate.rate.longValue())
+						.add(rate.source);
 			}
-		}
-		else if (selection.equals(QUERY_PARAM_Q))
-		{
-			final String selectionArg = selectionArgs[0].toLowerCase(Locale.US);
-			for (final Map.Entry<String, ExchangeRate> entry : exchangeRates.entrySet())
-			{
-				final ExchangeRate rate = entry.getValue();
-				final String currencyCode = rate.currencyCode;
-				final String currencySymbol = GenericUtils.currencySymbol(currencyCode);
-				if (currencyCode.toLowerCase(Locale.US).contains(selectionArg) || currencySymbol.toLowerCase(Locale.US).contains(selectionArg))
-					cursor.newRow().add(currencyCode.hashCode()).add(currencyCode).add(rate.rate.longValue()).add(rate.source);
+		} else if (selection.equals(KEY_CURRENCY_CODE)) {
+			final String selectedCode = selectionArgs[0];
+			ExchangeRate rate = selectedCode != null ? exchangeRates
+					.get(selectedCode) : null;
+
+			if (rate == null) {
+				final String defaultCode = defaultCurrencyCode();
+				rate = defaultCode != null ? exchangeRates.get(defaultCode)
+						: null;
+
+				if (rate == null) {
+					rate = exchangeRates
+							.get(Constants.DEFAULT_EXCHANGE_CURRENCY);
+
+					if (rate == null)
+						return null;
+				}
 			}
-		}
-		else if (selection.equals(KEY_CURRENCY_CODE))
-		{
-			final String selectionArg = selectionArgs[0];
-			final ExchangeRate rate = bestExchangeRate(selectionArg);
-			if (rate != null)
-				cursor.newRow().add(rate.currencyCode.hashCode()).add(rate.currencyCode).add(rate.rate.longValue()).add(rate.source);
+
+			cursor.newRow().add(rate.currencyCode.hashCode())
+					.add(rate.currencyCode).add(rate.rate.longValue())
+					.add(rate.source);
 		}
 
 		return cursor;
 	}
 
-	private ExchangeRate bestExchangeRate(final String currencyCode)
-	{
-		ExchangeRate rate = currencyCode != null ? exchangeRates.get(currencyCode) : null;
-		if (rate != null)
-			return rate;
-
-		final String defaultCode = defaultCurrencyCode();
-		rate = defaultCode != null ? exchangeRates.get(defaultCode) : null;
-
-		if (rate != null)
-			return rate;
-
-		return exchangeRates.get(Constants.DEFAULT_EXCHANGE_CURRENCY);
-	}
-
-	private String defaultCurrencyCode()
-	{
-		try
-		{
+	private String defaultCurrencyCode() {
+		try {
 			return Currency.getInstance(Locale.getDefault()).getCurrencyCode();
-		}
-		catch (final IllegalArgumentException x)
-		{
+		} catch (final IllegalArgumentException x) {
 			return null;
 		}
 	}
 
-	public static ExchangeRate getExchangeRate(@Nonnull final Cursor cursor)
-	{
-		final String currencyCode = cursor.getString(cursor.getColumnIndexOrThrow(ExchangeRatesProvider.KEY_CURRENCY_CODE));
-		final BigInteger rate = BigInteger.valueOf(cursor.getLong(cursor.getColumnIndexOrThrow(ExchangeRatesProvider.KEY_RATE)));
-		final String source = cursor.getString(cursor.getColumnIndexOrThrow(ExchangeRatesProvider.KEY_SOURCE));
+	public static ExchangeRate getExchangeRate(@Nonnull final Cursor cursor) {
+		final String currencyCode = cursor
+				.getString(cursor
+						.getColumnIndexOrThrow(ExchangeRatesProvider.KEY_CURRENCY_CODE));
+		final BigInteger rate = BigInteger.valueOf(cursor.getLong(cursor
+				.getColumnIndexOrThrow(ExchangeRatesProvider.KEY_RATE)));
+		final String source = cursor.getString(cursor
+				.getColumnIndexOrThrow(ExchangeRatesProvider.KEY_SOURCE));
 
 		return new ExchangeRate(currencyCode, rate, source);
 	}
 
 	@Override
-	public Uri insert(final Uri uri, final ContentValues values)
-	{
+	public Uri insert(final Uri uri, final ContentValues values) {
 		throw new UnsupportedOperationException();
 	}
 
 	@Override
-	public int update(final Uri uri, final ContentValues values, final String selection, final String[] selectionArgs)
-	{
+	public int update(final Uri uri, final ContentValues values,
+			final String selection, final String[] selectionArgs) {
 		throw new UnsupportedOperationException();
 	}
 
 	@Override
-	public int delete(final Uri uri, final String selection, final String[] selectionArgs)
-	{
+	public int delete(final Uri uri, final String selection,
+			final String[] selectionArgs) {
 		throw new UnsupportedOperationException();
 	}
 
 	@Override
-	public String getType(final Uri uri)
-	{
+	public String getType(final Uri uri) {
 		throw new UnsupportedOperationException();
 	}
 
-	private static Map<String, ExchangeRate> requestExchangeRates(final URL url, final String userAgent, final String source, final String... fields)
-	{
+	private static Map<String, ExchangeRate> requestExchangeRatesCCC(
+			final URL url, final String... fields) {
 		final long start = System.currentTimeMillis();
 
 		HttpURLConnection connection = null;
 		Reader reader = null;
 
-		try
-		{
+		try {
 			connection = (HttpURLConnection) url.openConnection();
-
-			connection.setInstanceFollowRedirects(false);
 			connection.setConnectTimeout(Constants.HTTP_TIMEOUT_MS);
 			connection.setReadTimeout(Constants.HTTP_TIMEOUT_MS);
-			connection.addRequestProperty("User-Agent", userAgent);
-			connection.addRequestProperty("Accept-Encoding", "gzip");
 			connection.connect();
 
 			final int responseCode = connection.getResponseCode();
-			if (responseCode == HttpURLConnection.HTTP_OK)
-			{
-				final String contentEncoding = connection.getContentEncoding();
-
-				InputStream is = new BufferedInputStream(connection.getInputStream(), 1024);
-				if ("gzip".equalsIgnoreCase(contentEncoding))
-					is = new GZIPInputStream(is);
-
-				reader = new InputStreamReader(is, Constants.UTF_8);
+			if (responseCode == HttpURLConnection.HTTP_OK) {
+				reader = new InputStreamReader(new BufferedInputStream(
+						connection.getInputStream(), 1024), Constants.UTF_8);
 				final StringBuilder content = new StringBuilder();
-				final long length = Io.copy(reader, content);
+				Io.copy(reader, content);
+
+				final Map<String, ExchangeRate> rates = new TreeMap<String, ExchangeRate>();
+				log.info("fetched exchange rates from " + url + ", took "
+						+ (System.currentTimeMillis() - start) + " ms");
+
+				// Parse the WDC Prices row
+				int cellPos = content.lastIndexOf("<td>WDC Prices</td>")+20;
+				cellPos = content.indexOf("<td>",cellPos)+4;
+			//	log.info("WDC prices end:" + cellPos);
+				int endPos = content.indexOf("</td>", cellPos);
+		//		log.info("Cell ends:" + endPos);
+				String pricesCell = content.substring(cellPos, endPos);
+				// String ounces and others from metals
+				pricesCell = pricesCell.replaceAll("&nbsp;oz","");
+				pricesCell = pricesCell.replaceAll("\\s\\(.*\\)","");
+				
+		//		log.info("Prices cell:" + pricesCell);
+				// Each currency on its line ending with <br />, currency code
+				// is 3 or 4 chars before separated by a space, and rate is
+				// everything before.
+				int rowCursor = cellPos;
+				while (pricesCell.length()>7) {
+					int startCurrSymbol = pricesCell.lastIndexOf(" ",							pricesCell.indexOf("<br />"));
+			//		log.info("startCurrSymbol:" + startCurrSymbol);
+					String currencyCode = pricesCell.substring(startCurrSymbol,							pricesCell.indexOf("<br />"));
+			//		log.info("currency code:" + currencyCode);
+					String curRate = pricesCell.substring(0,	startCurrSymbol).replaceAll("\\s+","");
+			//		log.info("Currency rate:" + curRate);
+					BigInteger rate = GenericUtils							.toNanoCoins(curRate, 0);
+			//		log.info("Found currency " + currencyCode + " at " + rate);
+					rates.put(currencyCode, new ExchangeRate(currencyCode,
+							rate, url.getHost()));
+					
+					pricesCell = pricesCell.substring(pricesCell.indexOf("<br />") + 7, pricesCell.length());
+
+				}
+
+				return rates;
+			} else {
+				log.warn("http status " + responseCode + " when fetching "
+						+ url);
+			}
+		} catch (final Exception x) {
+			log.warn("problem fetching exchange rates", x);
+		} finally {
+			if (reader != null) {
+				try {
+					reader.close();
+				} catch (final IOException x) {
+					// swallow
+				}
+			}
+
+			if (connection != null)
+				connection.disconnect();
+		}
+
+		return null;
+	}
+
+	private static Map<String, ExchangeRate> requestExchangeRates(
+			final URL url, final String... fields) {
+		final long start = System.currentTimeMillis();
+
+		HttpURLConnection connection = null;
+		Reader reader = null;
+
+		try {
+			connection = (HttpURLConnection) url.openConnection();
+			connection.setConnectTimeout(Constants.HTTP_TIMEOUT_MS);
+			connection.setReadTimeout(Constants.HTTP_TIMEOUT_MS);
+			connection.connect();
+
+			final int responseCode = connection.getResponseCode();
+			if (responseCode == HttpURLConnection.HTTP_OK) {
+				reader = new InputStreamReader(new BufferedInputStream(
+						connection.getInputStream(), 1024), Constants.UTF_8);
+				final StringBuilder content = new StringBuilder();
+				Io.copy(reader, content);
 
 				final Map<String, ExchangeRate> rates = new TreeMap<String, ExchangeRate>();
 
 				final JSONObject head = new JSONObject(content.toString());
-				for (final Iterator<String> i = head.keys(); i.hasNext();)
-				{
+				for (final Iterator<String> i = head.keys(); i.hasNext();) {
 					final String currencyCode = i.next();
-					if (!"timestamp".equals(currencyCode))
-					{
+					if (!"timestamp".equals(currencyCode)) {
 						final JSONObject o = head.getJSONObject(currencyCode);
 
-						for (final String field : fields)
-						{
+						for (final String field : fields) {
 							final String rateStr = o.optString(field, null);
 
-							if (rateStr != null)
-							{
-								try
-								{
-									final BigInteger rate = GenericUtils.parseCoin(rateStr, 0);
+							if (rateStr != null) {
+								try {
+									final BigInteger rate = GenericUtils
+											.toNanoCoins(rateStr, 0);
 
-									if (rate.signum() > 0)
-									{
-										rates.put(currencyCode, new ExchangeRate(currencyCode, rate, source));
+									if (rate.signum() > 0) {
+										rates.put(currencyCode,
+												new ExchangeRate(currencyCode,
+														rate, url.getHost()));
 										break;
 									}
-								}
-								catch (final ArithmeticException x)
-								{
-									log.warn("problem fetching {} exchange rate from {} ({}): {}", currencyCode, url, contentEncoding, x.getMessage());
+								} catch (final ArithmeticException x) {
+									log.warn("problem fetching exchange rate: "
+											+ currencyCode, x);
 								}
 							}
 						}
 					}
 				}
 
-				log.info("fetched exchange rates from {} ({}), {} chars, took {} ms", url, contentEncoding, length, System.currentTimeMillis()
-						- start);
+				log.info("fetched exchange rates from " + url + ", took "
+						+ (System.currentTimeMillis() - start) + " ms");
 
 				return rates;
+			} else {
+				log.warn("http status " + responseCode + " when fetching "
+						+ url);
 			}
-			else
-			{
-				log.warn("http status {} when fetching exchange rates from {}", responseCode, url);
-			}
-		}
-		catch (final Exception x)
-		{
-			log.warn("problem fetching exchange rates from " + url, x);
-		}
-		finally
-		{
-			if (reader != null)
-			{
-				try
-				{
+		} catch (final Exception x) {
+			log.warn("problem fetching exchange rates", x);
+		} finally {
+			if (reader != null) {
+				try {
 					reader.close();
-				}
-				catch (final IOException x)
-				{
+				} catch (final IOException x) {
 					// swallow
 				}
 			}

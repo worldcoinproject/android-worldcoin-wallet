@@ -24,11 +24,10 @@ import java.util.concurrent.atomic.AtomicLong;
 
 import android.os.Handler;
 
-import com.google.bitcoin.core.ECKey;
-import com.google.bitcoin.core.Transaction;
-import com.google.bitcoin.core.Wallet;
-import com.google.bitcoin.core.WalletEventListener;
-import com.google.bitcoin.script.Script;
+import com.google.worldcoin.core.ECKey;
+import com.google.worldcoin.core.Transaction;
+import com.google.worldcoin.core.Wallet;
+import com.google.worldcoin.core.WalletEventListener;
 
 /**
  * @author Andreas Schildbach
@@ -135,12 +134,6 @@ public abstract class ThrottlingWalletChangeListener implements WalletEventListe
 
 	@Override
 	public void onKeysAdded(final Wallet wallet, final List<ECKey> keys)
-	{
-		// swallow
-	}
-
-	@Override
-	public void onScriptsAdded(final Wallet wallet, final List<Script> scripts)
 	{
 		// swallow
 	}

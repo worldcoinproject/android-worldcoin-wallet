@@ -27,8 +27,10 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.content.SharedPreferences;
 import android.database.Cursor;
 import android.os.Bundle;
+import android.preference.PreferenceManager;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.LoaderManager;
 import android.support.v4.app.LoaderManager.LoaderCallbacks;
@@ -41,9 +43,8 @@ import android.view.ViewGroup;
 import android.widget.FrameLayout;
 import android.widget.TextView;
 
-import com.google.bitcoin.core.Wallet;
+import com.google.worldcoin.core.Wallet;
 
-import de.schildbach.wallet.Configuration;
 import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.ExchangeRatesProvider;
 import de.schildbach.wallet.ExchangeRatesProvider.ExchangeRate;
@@ -59,8 +60,8 @@ public final class WalletBalanceFragment extends Fragment
 {
 	private WalletApplication application;
 	private AbstractWalletActivity activity;
-	private Configuration config;
 	private Wallet wallet;
+	private SharedPreferences prefs;
 	private LoaderManager loaderManager;
 
 	private View viewBalance;
@@ -91,8 +92,8 @@ public final class WalletBalanceFragment extends Fragment
 
 		this.activity = (AbstractWalletActivity) activity;
 		this.application = (WalletApplication) activity.getApplication();
-		this.config = application.getConfiguration();
 		this.wallet = application.getWallet();
+		this.prefs = PreferenceManager.getDefaultSharedPreferences(activity);
 		this.loaderManager = getLoaderManager();
 
 		showLocalBalance = getResources().getBoolean(R.bool.show_local_balance);
@@ -219,9 +220,14 @@ public final class WalletBalanceFragment extends Fragment
 
 			if (balance != null)
 			{
+				final String precision = prefs.getString(Constants.PREFS_KEY_BTC_PRECISION, Constants.PREFS_DEFAULT_BTC_PRECISION);
+				final int btcPrecision = precision.charAt(0) - '0';
+				final int btcShift = precision.length() == 3 ? precision.charAt(2) - '0' : 0;
+				final String prefix = btcShift == 0 ? Constants.CURRENCY_CODE_BTC : Constants.CURRENCY_CODE_MBTC;
+
 				viewBalanceBtc.setVisibility(View.VISIBLE);
-				viewBalanceBtc.setPrecision(config.getBtcPrecision(), config.getBtcShift());
-				viewBalanceBtc.setPrefix(config.getBtcPrefix());
+				viewBalanceBtc.setPrecision(btcPrecision, btcShift);
+				viewBalanceBtc.setPrefix(prefix);
 				viewBalanceBtc.setAmount(balance);
 
 				if (showLocalBalance)
@@ -296,13 +302,13 @@ public final class WalletBalanceFragment extends Fragment
 		@Override
 		public Loader<Cursor> onCreateLoader(final int id, final Bundle args)
 		{
-			return new ExchangeRateLoader(activity, config);
+			return new ExchangeRateLoader(activity);
 		}
 
 		@Override
 		public void onLoadFinished(final Loader<Cursor> loader, final Cursor data)
 		{
-			if (data != null && data.getCount() > 0)
+			if (data != null)
 			{
 				data.moveToFirst();
 				exchangeRate = ExchangeRatesProvider.getExchangeRate(data);

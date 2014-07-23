@@ -17,6 +17,7 @@
 
 package de.schildbach.wallet.ui;
 
+import java.math.BigInteger;
 import java.util.ArrayList;
 
 import javax.annotation.Nonnull;
@@ -44,21 +45,16 @@ import com.actionbarsherlock.view.ActionMode;
 import com.actionbarsherlock.view.Menu;
 import com.actionbarsherlock.view.MenuInflater;
 import com.actionbarsherlock.view.MenuItem;
-import com.google.bitcoin.core.Address;
-import com.google.bitcoin.core.AddressFormatException;
-import com.google.bitcoin.core.Transaction;
-import com.google.bitcoin.core.VerificationException;
-import com.google.bitcoin.uri.BitcoinURI;
+import com.google.worldcoin.core.Address;
+import com.google.worldcoin.core.Transaction;
+import com.google.worldcoin.uri.BitcoinURI;
 
 import de.schildbach.wallet.AddressBookProvider;
 import de.schildbach.wallet.Constants;
-import de.schildbach.wallet.data.PaymentIntent;
 import de.schildbach.wallet.ui.InputParser.StringInputParser;
-import de.schildbach.wallet.ui.send.SendCoinsActivity;
 import de.schildbach.wallet.util.BitmapFragment;
 import de.schildbach.wallet.util.Qr;
 import de.schildbach.wallet.util.WalletUtils;
-import de.schildbach.wallet.util.WholeStringBuilder;
 import de.schildbach.wallet_test.R;
 
 /**
@@ -93,6 +89,14 @@ public final class SendingAddressesFragment extends SherlockListFragment impleme
 		super.onCreate(savedInstanceState);
 
 		setHasOptionsMenu(true);
+	}
+
+	@Override
+	public void onActivityCreated(final Bundle savedInstanceState)
+	{
+		super.onActivityCreated(savedInstanceState);
+
+		setEmptyText(getString(R.string.address_book_empty_text));
 
 		adapter = new SimpleCursorAdapter(activity, R.layout.address_book_row, null, new String[] { AddressBookProvider.KEY_LABEL,
 				AddressBookProvider.KEY_ADDRESS }, new int[] { R.id.address_book_row_label, R.id.address_book_row_address }, 0);
@@ -116,22 +120,6 @@ public final class SendingAddressesFragment extends SherlockListFragment impleme
 	}
 
 	@Override
-	public void onViewCreated(View view, Bundle savedInstanceState)
-	{
-		super.onViewCreated(view, savedInstanceState);
-
-		setEmptyText(WholeStringBuilder.bold(getString(R.string.address_book_empty_text)));
-	}
-
-	@Override
-	public void onDestroy()
-	{
-		loaderManager.destroyLoader(0);
-
-		super.onDestroy();
-	}
-
-	@Override
 	public void onActivityResult(final int requestCode, final int resultCode, final Intent intent)
 	{
 		if (requestCode == REQUEST_CODE_SCAN && resultCode == Activity.RESULT_OK)
@@ -141,7 +129,7 @@ public final class SendingAddressesFragment extends SherlockListFragment impleme
 			new StringInputParser(input)
 			{
 				@Override
-				protected void handlePaymentIntent(final PaymentIntent paymentIntent)
+				protected void bitcoinRequest(final Address address, final String addressLabel, final BigInteger amount, final String bluetoothMac)
 				{
 					// workaround for "IllegalStateException: Can not perform this action after onSaveInstanceState"
 					handler.postDelayed(new Runnable()
@@ -149,16 +137,13 @@ public final class SendingAddressesFragment extends SherlockListFragment impleme
 						@Override
 						public void run()
 						{
-							if (paymentIntent.hasAddress())
-								EditAddressBookEntryFragment.edit(getFragmentManager(), paymentIntent.getAddress().toString());
-							else
-								dialog(activity, null, R.string.address_book_options_scan_title, R.string.address_book_options_scan_invalid);
+							EditAddressBookEntryFragment.edit(getFragmentManager(), address.toString());
 						}
 					}, 500);
 				}
 
 				@Override
-				protected void handleDirectTransaction(final Transaction transaction) throws VerificationException
+				protected void directTransaction(final Transaction transaction)
 				{
 					cannotClassify(input);
 				}
@@ -210,17 +195,13 @@ public final class SendingAddressesFragment extends SherlockListFragment impleme
 			new StringInputParser(input)
 			{
 				@Override
-				protected void handlePaymentIntent(final PaymentIntent paymentIntent)
+				protected void bitcoinRequest(final Address address, final String addressLabel, final BigInteger amount, final String bluetoothMac)
 				{
-					if (paymentIntent.hasAddress())
-						EditAddressBookEntryFragment.edit(getFragmentManager(), paymentIntent.getAddress().toString());
-					else
-						dialog(activity, null, R.string.address_book_options_paste_from_clipboard_title,
-								R.string.address_book_options_paste_from_clipboard_invalid);
+					EditAddressBookEntryFragment.edit(getFragmentManager(), address.toString());
 				}
 
 				@Override
-				protected void handleDirectTransaction(final Transaction transaction) throws VerificationException
+				protected void directTransaction(final Transaction transaction)
 				{
 					cannotClassify(input);
 				}
@@ -234,7 +215,7 @@ public final class SendingAddressesFragment extends SherlockListFragment impleme
 		}
 		else
 		{
-			activity.toast(R.string.address_book_options_paste_from_clipboard_empty);
+			activity.toast(R.string.address_book_options_copy_from_clipboard_msg_empty);
 		}
 	}
 
@@ -326,15 +307,7 @@ public final class SendingAddressesFragment extends SherlockListFragment impleme
 
 	private void handleSend(final String address)
 	{
-		try
-		{
-			SendCoinsActivity.start(activity, PaymentIntent.fromAddress(address, null));
-		}
-		catch (final AddressFormatException x)
-		{
-			// cannot happen, address was picked from address book
-			throw new RuntimeException(x);
-		}
+		SendCoinsActivity.start(activity, address, null, null, null);
 	}
 
 	private void handleRemove(final String address)

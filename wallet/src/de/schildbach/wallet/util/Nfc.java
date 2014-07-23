@@ -35,6 +35,8 @@ import de.schildbach.wallet.Constants;
  */
 public class Nfc
 {
+	private static final byte[] RTD_ANDROID_APP = "android.com:pkg".getBytes(Constants.US_ASCII);
+
 	public static boolean publishUri(@Nullable final NfcManager nfcManager, final Activity activity, @Nonnull final String uri)
 	{
 		if (nfcManager == null)
@@ -45,13 +47,13 @@ public class Nfc
 			return false;
 
 		final NdefRecord uriRecord = wellKnownUriRecord(uri);
-		adapter.enableForegroundNdefPush(activity, ndefMessage(uriRecord));
+		adapter.enableForegroundNdefPush(activity, ndefMessage(uriRecord, true, activity.getPackageName()));
 
 		return true;
 	}
 
 	public static boolean publishMimeObject(@Nullable final NfcManager nfcManager, final Activity activity, @Nonnull final String mimeType,
-			@Nonnull final byte[] payload)
+			@Nonnull final byte[] payload, final boolean includeApplicationRecord)
 	{
 		if (nfcManager == null)
 			return false;
@@ -61,7 +63,7 @@ public class Nfc
 			return false;
 
 		final NdefRecord mimeRecord = mimeRecord(mimeType, payload);
-		adapter.enableForegroundNdefPush(activity, ndefMessage(mimeRecord));
+		adapter.enableForegroundNdefPush(activity, ndefMessage(mimeRecord, includeApplicationRecord, activity.getPackageName()));
 
 		return true;
 	}
@@ -78,9 +80,17 @@ public class Nfc
 		adapter.disableForegroundNdefPush(activity);
 	}
 
-	private static NdefMessage ndefMessage(@Nonnull final NdefRecord record)
+	private static NdefMessage ndefMessage(@Nonnull final NdefRecord record, final boolean includeApplicationRecord, final String packageName)
 	{
-		return new NdefMessage(new NdefRecord[] { record });
+		if (includeApplicationRecord)
+		{
+			final NdefRecord appRecord = androidApplicationRecord(packageName);
+			return new NdefMessage(new NdefRecord[] { record, appRecord });
+		}
+		else
+		{
+			return new NdefMessage(new NdefRecord[] { record });
+		}
 	}
 
 	private static NdefRecord absoluteUriRecord(@Nonnull final String uri)
@@ -102,6 +112,11 @@ public class Nfc
 		final byte[] mimeBytes = mimeType.getBytes(Constants.US_ASCII);
 		final NdefRecord mimeRecord = new NdefRecord(NdefRecord.TNF_MIME_MEDIA, mimeBytes, new byte[0], payload);
 		return mimeRecord;
+	}
+
+	private static NdefRecord androidApplicationRecord(@Nonnull final String packageName)
+	{
+		return new NdefRecord(NdefRecord.TNF_EXTERNAL_TYPE, RTD_ANDROID_APP, new byte[0], packageName.getBytes(Constants.US_ASCII));
 	}
 
 	@CheckForNull

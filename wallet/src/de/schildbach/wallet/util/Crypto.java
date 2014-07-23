@@ -23,7 +23,6 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.Reader;
 import java.security.SecureRandom;
-import java.util.Arrays;
 
 import javax.annotation.Nonnull;
 
@@ -38,8 +37,7 @@ import org.spongycastle.crypto.modes.CBCBlockCipher;
 import org.spongycastle.crypto.paddings.PaddedBufferedBlockCipher;
 import org.spongycastle.crypto.params.ParametersWithIV;
 
-import com.google.common.io.BaseEncoding;
-
+import android.util.Base64;
 import de.schildbach.wallet.Constants;
 
 /**
@@ -57,9 +55,6 @@ import de.schildbach.wallet.Constants;
  */
 public class Crypto
 {
-	private static final BaseEncoding BASE64_ENCRYPT = BaseEncoding.base64().withSeparator("\n", 76);
-	private static final BaseEncoding BASE64_DECRYPT = BaseEncoding.base64().withSeparator("\r\n", 76);
-
 	/**
 	 * number of times the password & salt are hashed during key creation.
 	 */
@@ -94,7 +89,7 @@ public class Crypto
 	 * Magic text that appears at the beginning of every OpenSSL encrypted file. Used in identifying encrypted key
 	 * files.
 	 */
-	private static final String OPENSSL_MAGIC_TEXT = BASE64_ENCRYPT.encode(Crypto.OPENSSL_SALTED_BYTES).substring(0,
+	private static final String OPENSSL_MAGIC_TEXT = new String(encodeBase64(Crypto.OPENSSL_SALTED_BYTES), Constants.UTF_8).substring(0,
 			Crypto.NUMBER_OF_CHARACTERS_TO_MATCH_IN_OPENSSL_MAGIC_TEXT);
 
 	private static final int NUMBER_OF_CHARACTERS_TO_MATCH_IN_OPENSSL_MAGIC_TEXT = 10;
@@ -134,27 +129,12 @@ public class Crypto
 	{
 		final byte[] plainTextAsBytes = plainText.getBytes(Constants.UTF_8);
 
-		return encrypt(plainTextAsBytes, password);
-	}
-
-	/**
-	 * Password based encryption using AES - CBC 256 bits.
-	 * 
-	 * @param plainTextAsBytes
-	 *            The bytes to encrypt
-	 * @param password
-	 *            The password to use for encryption
-	 * @return The encrypted string
-	 * @throws IOException
-	 */
-	public static String encrypt(@Nonnull final byte[] plainTextAsBytes, @Nonnull final char[] password) throws IOException
-	{
-		final byte[] encryptedBytes = encryptRaw(plainTextAsBytes, password);
+		final byte[] encryptedBytes = encrypt(plainTextAsBytes, password);
 
 		// OpenSSL prefixes the salt bytes + encryptedBytes with Salted___ and then base64 encodes it
 		final byte[] encryptedBytesPlusSaltedText = concat(OPENSSL_SALTED_BYTES, encryptedBytes);
 
-		return BASE64_ENCRYPT.encode(encryptedBytesPlusSaltedText);
+		return new String(encodeBase64(encryptedBytesPlusSaltedText), Constants.UTF_8);
 	}
 
 	/**
@@ -167,7 +147,7 @@ public class Crypto
 	 * @return SALT_LENGTH bytes of salt followed by the encrypted bytes.
 	 * @throws IOException
 	 */
-	private static byte[] encryptRaw(final byte[] plainTextAsBytes, final char[] password) throws IOException
+	private static byte[] encrypt(final byte[] plainTextAsBytes, final char[] password) throws IOException
 	{
 		try
 		{
@@ -181,11 +161,12 @@ public class Crypto
 			final BufferedBlockCipher cipher = new PaddedBufferedBlockCipher(new CBCBlockCipher(new AESFastEngine()));
 			cipher.init(true, key);
 			final byte[] encryptedBytes = new byte[cipher.getOutputSize(plainTextAsBytes.length)];
-			final int processLen = cipher.processBytes(plainTextAsBytes, 0, plainTextAsBytes.length, encryptedBytes, 0);
-			final int doFinalLen = cipher.doFinal(encryptedBytes, processLen);
+			final int length = cipher.processBytes(plainTextAsBytes, 0, plainTextAsBytes.length, encryptedBytes, 0);
+
+			cipher.doFinal(encryptedBytes, length);
 
 			// The result bytes are the SALT_LENGTH bytes followed by the encrypted bytes.
-			return concat(salt, Arrays.copyOf(encryptedBytes, processLen + doFinalLen));
+			return concat(salt, encryptedBytes);
 		}
 		catch (final InvalidCipherTextException x)
 		{
@@ -209,32 +190,7 @@ public class Crypto
 	 */
 	public static String decrypt(@Nonnull final String textToDecode, @Nonnull final char[] password) throws IOException
 	{
-		final byte[] decryptedBytes = decryptBytes(textToDecode, password);
-
-		return new String(decryptedBytes, Constants.UTF_8).trim();
-	}
-
-	/**
-	 * Decrypt bytes previously encrypted with this class.
-	 * 
-	 * @param textToDecode
-	 *            The code to decrypt
-	 * @param password
-	 *            password to use for decryption
-	 * @return The decrypted bytes
-	 * @throws IOException
-	 */
-	public static byte[] decryptBytes(@Nonnull final String textToDecode, @Nonnull final char[] password) throws IOException
-	{
-		final byte[] decodeTextAsBytes;
-		try
-		{
-			decodeTextAsBytes = BASE64_DECRYPT.decode(textToDecode);
-		}
-		catch (final IllegalArgumentException x)
-		{
-			throw new IOException("invalid base64 encoding");
-		}
+		final byte[] decodeTextAsBytes = decodeBase64(textToDecode.getBytes(Constants.UTF_8));
 
 		if (decodeTextAsBytes.length < OPENSSL_SALTED_BYTES.length)
 			throw new IOException("out of salt");
@@ -242,9 +198,9 @@ public class Crypto
 		final byte[] cipherBytes = new byte[decodeTextAsBytes.length - OPENSSL_SALTED_BYTES.length];
 		System.arraycopy(decodeTextAsBytes, OPENSSL_SALTED_BYTES.length, cipherBytes, 0, decodeTextAsBytes.length - OPENSSL_SALTED_BYTES.length);
 
-		final byte[] decryptedBytes = decryptRaw(cipherBytes, password);
+		final byte[] decryptedBytes = decrypt(cipherBytes, password);
 
-		return decryptedBytes;
+		return new String(decryptedBytes, Constants.UTF_8).trim();
 	}
 
 	/**
@@ -257,7 +213,7 @@ public class Crypto
 	 * @return The decrypted bytes
 	 * @throws IOException
 	 */
-	private static byte[] decryptRaw(final byte[] bytesToDecode, final char[] password) throws IOException
+	private static byte[] decrypt(final byte[] bytesToDecode, final char[] password) throws IOException
 	{
 		try
 		{
@@ -276,18 +232,36 @@ public class Crypto
 			cipher.init(false, key);
 
 			final byte[] decryptedBytes = new byte[cipher.getOutputSize(cipherBytes.length)];
-			final int processLen = cipher.processBytes(cipherBytes, 0, cipherBytes.length, decryptedBytes, 0);
-			final int doFinalLen = cipher.doFinal(decryptedBytes, processLen);
+			final int length = cipher.processBytes(cipherBytes, 0, cipherBytes.length, decryptedBytes, 0);
 
-			return Arrays.copyOf(decryptedBytes, processLen + doFinalLen);
+			cipher.doFinal(decryptedBytes, length);
+
+			return decryptedBytes;
 		}
 		catch (final InvalidCipherTextException x)
 		{
-			throw new IOException("Could not decrypt bytes", x);
+			throw new IOException("Could not decrypt input string", x);
 		}
 		catch (final DataLengthException x)
 		{
-			throw new IOException("Could not decrypt bytes", x);
+			throw new IOException("Could not decrypt input string", x);
+		}
+	}
+
+	private static byte[] encodeBase64(byte[] decoded)
+	{
+		return Base64.encode(decoded, Base64.DEFAULT);
+	}
+
+	private static byte[] decodeBase64(byte[] encoded) throws IOException
+	{
+		try
+		{
+			return Base64.decode(encoded, Base64.DEFAULT);
+		}
+		catch (final IllegalArgumentException x)
+		{
+			throw new IOException("illegal base64 padding", x);
 		}
 	}
 
