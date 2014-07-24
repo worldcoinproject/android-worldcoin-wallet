@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
 	xmlns:tools="http://schemas.android.com/tools"
-	package="de.schildbach.wallet_test"
+	package="info.coinfit.wdcwallet"
 	android:installLocation="internalOnly"
-	android:versionCode="173"
-	android:versionName="3.52-test" >
+	android:versionCode="101"
+	android:versionName="1.0.0" >
 
 	<uses-sdk
 		android:minSdkVersion="10"
@@ -84,7 +84,7 @@
 		</activity-alias>
 
 		<activity
-			android:name="de.schildbach.wallet.ui.send.SendCoinsActivity"
+			android:name="de.schildbach.wallet.ui.SendCoinsActivity"
 			android:configChanges="keyboard|keyboardHidden"
 			android:label="@string/send_coins_activity_title"
 			android:screenOrientation="behind"
@@ -101,20 +101,6 @@
 				<action android:name="android.nfc.action.NDEF_DISCOVERED" />
 
 				<data android:scheme="bitcoin" />
-
-				<category android:name="android.intent.category.DEFAULT" />
-			</intent-filter>
-			<intent-filter android:label="@string/send_coins_activity_title">
-				<action android:name="android.intent.action.VIEW" />
-
-				<data android:mimeType="application/bitcoin-paymentrequest" />
-
-				<category android:name="android.intent.category.DEFAULT" />
-			</intent-filter>
-			<intent-filter android:label="@string/send_coins_activity_title" >
-				<action android:name="android.nfc.action.NDEF_DISCOVERED" />
-
-				<data android:mimeType="application/bitcoin-paymentrequest" />
 
 				<category android:name="android.intent.category.DEFAULT" />
 			</intent-filter>
@@ -162,7 +148,7 @@
 
 				<category android:name="android.intent.category.DEFAULT" />
 
-				<data android:mimeType="application/x-bitcoin-wallet-backup" />
+				<data android:mimeType="x-bitcoin/private-keys" />
 				<data android:mimeType="application/octet-stream" />
 			</intent-filter>
 		</activity>
@@ -173,25 +159,19 @@
 			android:stateNotNeeded="true"
 			android:theme="@style/My.Theme.Fullscreen"
 			android:windowSoftInputMode="stateAlwaysHidden" />
-		<activity
-			android:name="de.schildbach.wallet.ui.send.SweepWalletActivity"
-			android:configChanges="keyboard|keyboardHidden"
-			android:label="@string/sweep_wallet_activity_title"
-			android:screenOrientation="behind"
-			android:windowSoftInputMode="adjustResize" />
 
 		<provider
 			android:name="de.schildbach.wallet.AddressBookProvider"
-			android:authorities="de.schildbach.wallet_test.address_book"
+			android:authorities="info.coinfit.wdcwallet.address_book"
 			android:exported="false" />
 		<provider
 			android:name="de.schildbach.wallet.ExchangeRatesProvider"
-			android:authorities="de.schildbach.wallet_test.exchange_rates"
+			android:authorities="info.coinfit.wdcwallet.exchange_rates"
 			android:exported="false" />
 
 		<receiver
 			android:name="de.schildbach.wallet.WalletBalanceWidgetProvider"
-			android:label="Bitcoin Wallet Balance" >
+			android:label="Worldcoin Wallet Balance" >
 			<intent-filter>
 				<action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
 			</intent-filter>

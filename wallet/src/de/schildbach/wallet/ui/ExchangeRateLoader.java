@@ -20,8 +20,9 @@ package de.schildbach.wallet.ui;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.content.SharedPreferences.OnSharedPreferenceChangeListener;
+import android.preference.PreferenceManager;
 import android.support.v4.content.CursorLoader;
-import de.schildbach.wallet.Configuration;
+import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.ExchangeRatesProvider;
 
 /**
@@ -29,14 +30,14 @@ import de.schildbach.wallet.ExchangeRatesProvider;
  */
 public final class ExchangeRateLoader extends CursorLoader implements OnSharedPreferenceChangeListener
 {
-	private final Configuration config;
+	private final SharedPreferences prefs;
 
-	public ExchangeRateLoader(final Context context, final Configuration config)
+	public ExchangeRateLoader(final Context context)
 	{
 		super(context, ExchangeRatesProvider.contentUri(context.getPackageName()), null, ExchangeRatesProvider.KEY_CURRENCY_CODE,
 				new String[] { null }, null);
 
-		this.config = config;
+		prefs = PreferenceManager.getDefaultSharedPreferences(context);
 	}
 
 	@Override
@@ -44,7 +45,7 @@ public final class ExchangeRateLoader extends CursorLoader implements OnSharedPr
 	{
 		super.onStartLoading();
 
-		config.registerOnSharedPreferenceChangeListener(this);
+		prefs.registerOnSharedPreferenceChangeListener(this);
 
 		onCurrencyChange();
 	}
@@ -52,7 +53,7 @@ public final class ExchangeRateLoader extends CursorLoader implements OnSharedPr
 	@Override
 	protected void onStopLoading()
 	{
-		config.unregisterOnSharedPreferenceChangeListener(this);
+		prefs.unregisterOnSharedPreferenceChangeListener(this);
 
 		super.onStopLoading();
 	}
@@ -60,13 +61,13 @@ public final class ExchangeRateLoader extends CursorLoader implements OnSharedPr
 	@Override
 	public void onSharedPreferenceChanged(final SharedPreferences sharedPreferences, final String key)
 	{
-		if (Configuration.PREFS_KEY_EXCHANGE_CURRENCY.equals(key))
+		if (Constants.PREFS_KEY_EXCHANGE_CURRENCY.equals(key))
 			onCurrencyChange();
 	}
 
 	private void onCurrencyChange()
 	{
-		final String exchangeCurrency = config.getExchangeCurrencyCode();
+		final String exchangeCurrency = prefs.getString(Constants.PREFS_KEY_EXCHANGE_CURRENCY, null);
 
 		setSelectionArgs(new String[] { exchangeCurrency });
 

@@ -18,13 +18,10 @@
 package de.schildbach.wallet.util;
 
 import java.io.BufferedReader;
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileFilter;
 import java.io.FileInputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.Writer;
 import java.math.BigInteger;
@@ -49,19 +46,17 @@ import android.text.style.RelativeSizeSpan;
 import android.text.style.StyleSpan;
 import android.text.style.TypefaceSpan;
 
-import com.google.bitcoin.core.Address;
-import com.google.bitcoin.core.AddressFormatException;
-import com.google.bitcoin.core.DumpedPrivateKey;
-import com.google.bitcoin.core.ECKey;
-import com.google.bitcoin.core.ScriptException;
-import com.google.bitcoin.core.Sha256Hash;
-import com.google.bitcoin.core.Transaction;
-import com.google.bitcoin.core.TransactionInput;
-import com.google.bitcoin.core.TransactionOutput;
-import com.google.bitcoin.core.Wallet;
-import com.google.bitcoin.script.Script;
-import com.google.bitcoin.store.UnreadableWalletException;
-import com.google.bitcoin.store.WalletProtobufSerializer;
+import com.google.worldcoin.core.Address;
+import com.google.worldcoin.core.AddressFormatException;
+import com.google.worldcoin.core.DumpedPrivateKey;
+import com.google.worldcoin.core.ECKey;
+import com.google.worldcoin.core.ScriptException;
+import com.google.worldcoin.core.Sha256Hash;
+import com.google.worldcoin.core.Transaction;
+import com.google.worldcoin.core.TransactionInput;
+import com.google.worldcoin.core.TransactionOutput;
+import com.google.worldcoin.core.Wallet;
+import com.google.worldcoin.script.Script;
 
 import de.schildbach.wallet.Constants;
 
@@ -120,20 +115,19 @@ public class WalletUtils
 	private static final Object SIGNIFICANT_SPAN = new StyleSpan(Typeface.BOLD);
 	public static final RelativeSizeSpan SMALLER_SPAN = new RelativeSizeSpan(0.85f);
 
-	public static void formatSignificant(@Nonnull final Spannable spannable, @Nullable final RelativeSizeSpan insignificantRelativeSizeSpan)
+	public static void formatSignificant(@Nonnull final Editable s, @Nullable final RelativeSizeSpan insignificantRelativeSizeSpan)
 	{
-		spannable.removeSpan(SIGNIFICANT_SPAN);
+		s.removeSpan(SIGNIFICANT_SPAN);
 		if (insignificantRelativeSizeSpan != null)
-			spannable.removeSpan(insignificantRelativeSizeSpan);
+			s.removeSpan(insignificantRelativeSizeSpan);
 
-		final Matcher m = P_SIGNIFICANT.matcher(spannable);
+		final Matcher m = P_SIGNIFICANT.matcher(s);
 		if (m.find())
 		{
 			final int pivot = m.group().length();
-			if (pivot > 0)
-				spannable.setSpan(SIGNIFICANT_SPAN, 0, pivot, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
-			if (spannable.length() > pivot && insignificantRelativeSizeSpan != null)
-				spannable.setSpan(insignificantRelativeSizeSpan, pivot, spannable.length(), Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
+			s.setSpan(SIGNIFICANT_SPAN, 0, pivot, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
+			if (s.length() > pivot && insignificantRelativeSizeSpan != null)
+				s.setSpan(insignificantRelativeSizeSpan, pivot, s.length(), Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
 		}
 	}
 
@@ -215,7 +209,7 @@ public class WalletUtils
 	{
 		final DateFormat format = Iso8601Format.newDateTimeFormatT();
 
-		out.write("# KEEP YOUR PRIVATE KEYS SAFE! Anyone who can read this can spend your Bitcoins.\n");
+		out.write("# KEEP YOUR PRIVATE KEYS SAFE! Anyone who can read this can spend your Worldcoins.\n");
 
 		for (final ECKey key : keys)
 		{
@@ -237,15 +231,11 @@ public class WalletUtils
 
 			final List<ECKey> keys = new LinkedList<ECKey>();
 
-			long charCount = 0;
 			while (true)
 			{
 				final String line = in.readLine();
 				if (line == null)
 					break; // eof
-				charCount += line.length();
-				if (charCount > Constants.BACKUP_MAX_CHARS)
-					throw new IOException("read more than the limit of " + Constants.BACKUP_MAX_CHARS + " characters");
 				if (line.trim().isEmpty() || line.charAt(0) == '#')
 					continue; // skip comment
 
@@ -304,39 +294,6 @@ public class WalletUtils
 		}
 	};
 
-	public static final FileFilter BACKUP_FILE_FILTER = new FileFilter()
-	{
-		@Override
-		public boolean accept(final File file)
-		{
-			InputStream is = null;
-
-			try
-			{
-				is = new FileInputStream(file);
-				return WalletProtobufSerializer.isWallet(is);
-			}
-			catch (final IOException x)
-			{
-				return false;
-			}
-			finally
-			{
-				if (is != null)
-				{
-					try
-					{
-						is.close();
-					}
-					catch (final IOException x)
-					{
-						// swallow
-					}
-				}
-			}
-		}
-	};
-
 	@CheckForNull
 	public static ECKey pickOldestKey(@Nonnull final Wallet wallet)
 	{
@@ -348,39 +305,5 @@ public class WalletUtils
 					oldestKey = key;
 
 		return oldestKey;
-	}
-
-	public static byte[] walletToByteArray(@Nonnull final Wallet wallet)
-	{
-		try
-		{
-			final ByteArrayOutputStream os = new ByteArrayOutputStream();
-			new WalletProtobufSerializer().writeWallet(wallet, os);
-			os.close();
-			return os.toByteArray();
-		}
-		catch (final IOException x)
-		{
-			throw new RuntimeException(x);
-		}
-	}
-
-	public static Wallet walletFromByteArray(@Nonnull final byte[] walletBytes)
-	{
-		try
-		{
-			final ByteArrayInputStream is = new ByteArrayInputStream(walletBytes);
-			final Wallet wallet = new WalletProtobufSerializer().readWallet(is);
-			is.close();
-			return wallet;
-		}
-		catch (final UnreadableWalletException x)
-		{
-			throw new RuntimeException(x);
-		}
-		catch (final IOException x)
-		{
-			throw new RuntimeException(x);
-		}
 	}
 }

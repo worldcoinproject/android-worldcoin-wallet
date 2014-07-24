@@ -21,12 +21,8 @@ import java.net.InetAddress;
 import java.util.List;
 import java.util.Map;
 import java.util.WeakHashMap;
-import java.util.concurrent.RejectedExecutionException;
 
 import javax.annotation.Nonnull;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import android.app.Activity;
 import android.content.BroadcastReceiver;
@@ -50,12 +46,11 @@ import android.widget.ArrayAdapter;
 import android.widget.TextView;
 
 import com.actionbarsherlock.app.SherlockListFragment;
-import com.google.bitcoin.core.Peer;
-import com.google.bitcoin.core.VersionMessage;
+import com.google.worldcoin.core.Peer;
+import com.google.worldcoin.core.VersionMessage;
 
 import de.schildbach.wallet.service.BlockchainService;
 import de.schildbach.wallet.service.BlockchainServiceImpl;
-import de.schildbach.wallet.util.WholeStringBuilder;
 import de.schildbach.wallet_test.R;
 
 /**
@@ -77,8 +72,6 @@ public final class PeerListFragment extends SherlockListFragment
 	private static final int ID_REVERSE_DNS_LOADER = 1;
 
 	private final Map<InetAddress, String> hostnames = new WeakHashMap<InetAddress, String>();
-
-	private static final Logger log = LoggerFactory.getLogger(PeerListFragment.class);
 
 	@Override
 	public void onAttach(final Activity activity)
@@ -102,7 +95,7 @@ public final class PeerListFragment extends SherlockListFragment
 	{
 		super.onViewCreated(view, savedInstanceState);
 
-		setEmptyText(WholeStringBuilder.bold(getString(R.string.peer_list_fragment_empty)));
+		setEmptyText(getString(R.string.peer_list_fragment_empty));
 	}
 
 	@Override
@@ -272,14 +265,7 @@ public final class PeerListFragment extends SherlockListFragment
 			@Override
 			public void onReceive(final Context context, final Intent intent)
 			{
-				try
-				{
-					forceLoad();
-				}
-				catch (final RejectedExecutionException x)
-				{
-					log.info("rejected execution: " + PeerLoader.this.toString());
-				}
+				forceLoad();
 			}
 		};
 	}

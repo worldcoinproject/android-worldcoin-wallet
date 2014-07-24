@@ -34,18 +34,15 @@ import android.view.ViewGroup;
 import android.widget.BaseAdapter;
 import android.widget.TextView;
 
-import com.google.bitcoin.core.Address;
-import com.google.bitcoin.core.ECKey;
-import com.google.bitcoin.core.Wallet;
+import com.google.worldcoin.core.Address;
+import com.google.worldcoin.core.ECKey;
+import com.google.worldcoin.core.Wallet;
 
 import de.schildbach.wallet.AddressBookProvider;
 import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.util.WalletUtils;
 import de.schildbach.wallet_test.R;
 
-/**
- * @author Andreas Schildbach
- */
 public class WalletAddressesAdapter extends BaseAdapter
 {
 	private final Context context;
@@ -57,9 +54,10 @@ public class WalletAddressesAdapter extends BaseAdapter
 	private final LayoutInflater inflater;
 
 	private final List<ECKey> keys = new ArrayList<ECKey>();
+	private final boolean showKeyCreationTime;
 	private String selectedAddress = null;
 
-	public WalletAddressesAdapter(final Context context, @Nonnull final Wallet wallet)
+	public WalletAddressesAdapter(final Context context, @Nonnull final Wallet wallet, final boolean showKeyCreationTime)
 	{
 		final Resources res = context.getResources();
 
@@ -70,6 +68,8 @@ public class WalletAddressesAdapter extends BaseAdapter
 		colorInsignificant = res.getColor(R.color.fg_insignificant);
 		colorLessSignificant = res.getColor(R.color.fg_less_significant);
 		inflater = LayoutInflater.from(context);
+
+		this.showKeyCreationTime = showKeyCreationTime;
 	}
 
 	public void replace(@Nonnull final Collection<ECKey> keys)
@@ -142,16 +142,19 @@ public class WalletAddressesAdapter extends BaseAdapter
 			labelView.setTextColor(colorInsignificant);
 		}
 
-		final TextView createdView = (TextView) row.findViewById(R.id.address_book_row_created);
-		final long createdMs = key.getCreationTimeSeconds() * DateUtils.SECOND_IN_MILLIS;
-		if (createdMs != 0)
+		if (showKeyCreationTime)
 		{
-			createdView.setText(dateFormat.format(new Date(createdMs)));
-			createdView.setVisibility(View.VISIBLE);
-		}
-		else
-		{
-			createdView.setVisibility(View.GONE);
+			final TextView createdView = (TextView) row.findViewById(R.id.address_book_row_created);
+			final long createdMs = key.getCreationTimeSeconds() * DateUtils.SECOND_IN_MILLIS;
+			if (createdMs != 0)
+			{
+				createdView.setText(dateFormat.format(new Date(createdMs)));
+				createdView.setVisibility(View.VISIBLE);
+			}
+			else
+			{
+				createdView.setVisibility(View.GONE);
+			}
 		}
 
 		final TextView messageView = (TextView) row.findViewById(R.id.address_book_row_message);

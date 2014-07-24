@@ -26,18 +26,19 @@ import android.appwidget.AppWidgetManager;
 import android.appwidget.AppWidgetProvider;
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.preference.PreferenceManager;
-import android.text.Spannable;
-import android.text.SpannableString;
+import android.text.Editable;
+import android.text.SpannableStringBuilder;
 import android.widget.RemoteViews;
 
-import com.google.bitcoin.core.Wallet;
-import com.google.bitcoin.core.Wallet.BalanceType;
+import com.google.worldcoin.core.Wallet;
+import com.google.worldcoin.core.Wallet.BalanceType;
 
 import de.schildbach.wallet.ui.RequestCoinsActivity;
+import de.schildbach.wallet.ui.SendCoinsActivity;
 import de.schildbach.wallet.ui.SendCoinsQrActivity;
 import de.schildbach.wallet.ui.WalletActivity;
-import de.schildbach.wallet.ui.send.SendCoinsActivity;
 import de.schildbach.wallet.util.GenericUtils;
 import de.schildbach.wallet.util.WalletUtils;
 import de.schildbach.wallet_test.R;
@@ -60,14 +61,20 @@ public class WalletBalanceWidgetProvider extends AppWidgetProvider
 	public static void updateWidgets(final Context context, @Nonnull final AppWidgetManager appWidgetManager, @Nonnull final int[] appWidgetIds,
 			@Nonnull final BigInteger balance)
 	{
-		final Configuration config = new Configuration(PreferenceManager.getDefaultSharedPreferences(context));
-		final Spannable balanceStr = new SpannableString(GenericUtils.formatValue(balance, config.getBtcPrecision(), config.getBtcShift()));
+		final SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
+		final String precision = prefs.getString(Constants.PREFS_KEY_BTC_PRECISION, Constants.PREFS_DEFAULT_BTC_PRECISION);
+		final int btcPrecision = precision.charAt(0) - '0';
+		final int btcShift = precision.length() == 3 ? precision.charAt(2) - '0' : 0;
+
+		final Editable balanceStr = new SpannableStringBuilder(GenericUtils.formatValue(balance, btcPrecision, btcShift));
 		WalletUtils.formatSignificant(balanceStr, WalletUtils.SMALLER_SPAN);
+
+		final String prefix = btcShift == 0 ? Constants.CURRENCY_CODE_BTC : Constants.CURRENCY_CODE_MBTC;
 
 		for (final int appWidgetId : appWidgetIds)
 		{
 			final RemoteViews views = new RemoteViews(context.getPackageName(), R.layout.wallet_balance_widget_content);
-			views.setTextViewText(R.id.widget_wallet_prefix, config.getBtcPrefix());
+			views.setTextViewText(R.id.widget_wallet_prefix, prefix);
 			views.setTextViewText(R.id.widget_wallet_balance, balanceStr);
 			views.setOnClickPendingIntent(R.id.widget_button_balance,
 					PendingIntent.getActivity(context, 0, new Intent(context, WalletActivity.class), 0));

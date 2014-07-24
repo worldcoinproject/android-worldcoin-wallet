@@ -23,10 +23,10 @@ import javax.annotation.Nullable;
 import android.os.Parcel;
 import android.os.Parcelable;
 
-import com.google.bitcoin.core.Address;
-import com.google.bitcoin.core.AddressFormatException;
-import com.google.bitcoin.core.NetworkParameters;
-import com.google.bitcoin.core.WrongNetworkException;
+import com.google.worldcoin.core.Address;
+import com.google.worldcoin.core.AddressFormatException;
+import com.google.worldcoin.core.NetworkParameters;
+import com.google.worldcoin.core.WrongNetworkException;
 
 /**
  * @author Andreas Schildbach

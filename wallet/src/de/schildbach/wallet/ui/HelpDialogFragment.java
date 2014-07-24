@@ -17,12 +17,17 @@
 
 package de.schildbach.wallet.ui;
 
+import java.util.Locale;
+
+import javax.annotation.Nonnull;
+
 import android.app.Activity;
 import android.app.Dialog;
 import android.os.Bundle;
 import android.support.v4.app.DialogFragment;
 import android.support.v4.app.FragmentManager;
-import android.text.Html;
+import android.view.Window;
+import android.webkit.WebView;
 
 /**
  * @author Andreas Schildbach
@@ -31,20 +36,20 @@ public final class HelpDialogFragment extends DialogFragment
 {
 	private static final String FRAGMENT_TAG = HelpDialogFragment.class.getName();
 
-	private static final String KEY_MESSAGE = "message";
+	private static final String KEY_PAGE = "page";
 
-	public static void page(final FragmentManager fm, final int messageResId)
+	public static void page(final FragmentManager fm, @Nonnull final String page)
 	{
-		final DialogFragment newFragment = HelpDialogFragment.instance(messageResId);
+		final DialogFragment newFragment = HelpDialogFragment.instance(page);
 		newFragment.show(fm, FRAGMENT_TAG);
 	}
 
-	private static HelpDialogFragment instance(final int messageResId)
+	private static HelpDialogFragment instance(@Nonnull final String page)
 	{
 		final HelpDialogFragment fragment = new HelpDialogFragment();
 
 		final Bundle args = new Bundle();
-		args.putInt(KEY_MESSAGE, messageResId);
+		args.putString(KEY_PAGE, page);
 		fragment.setArguments(args);
 
 		return fragment;
@@ -64,11 +69,49 @@ public final class HelpDialogFragment extends DialogFragment
 	public Dialog onCreateDialog(final Bundle savedInstanceState)
 	{
 		final Bundle args = getArguments();
-		final int messageResId = args.getInt(KEY_MESSAGE);
+		final String page = args.getString(KEY_PAGE);
 
-		final DialogBuilder dialog = new DialogBuilder(activity);
-		dialog.setMessage(Html.fromHtml(getString(messageResId)));
-		dialog.singleDismissButton(null);
-		return dialog.create();
+		final WebView webView = new WebView(activity);
+		webView.loadUrl("file:///android_asset/" + page + languagePrefix() + ".html");
+
+		final Dialog dialog = new Dialog(activity);
+		dialog.requestWindowFeature(Window.FEATURE_NO_TITLE);
+		dialog.setContentView(webView);
+		dialog.setCanceledOnTouchOutside(true);
+
+		return dialog;
+	}
+
+	private final static String languagePrefix()
+	{
+		final String language = Locale.getDefault().getLanguage();
+		if ("de".equals(language))
+			return "_de";
+		else if ("cs".equals(language))
+			return "_cs";
+		else if ("el".equals(language))
+			return "_el";
+		else if ("es".equals(language))
+			return "_es";
+		else if ("fr".equals(language))
+			return "_fr";
+		else if ("it".equals(language))
+			return "_it";
+		else if ("nl".equals(language))
+			return "_nl";
+		else if ("pl".equals(language))
+			return "_pl";
+		else if ("ru".equals(language))
+			return "_ru";
+		else if ("sk".equals(language))
+			return "_sk";
+		else if ("sv".equals(language))
+			return "_sv";
+		else if ("tr".equals(language))
+			return "_tr";
+		else if ("zh".equals(language))
+			return "_zh";
+		else
+			return "";
 	}
 }

@@ -2,6 +2,5 @@
 <resources>
 
 	<color name="bg_form">@android:color/white</color>
-	<color name="bg_dialog_title">@android:color/transparent</color>
 
 </resources>

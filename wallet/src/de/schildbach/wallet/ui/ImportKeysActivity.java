@@ -18,13 +18,13 @@
 package de.schildbach.wallet.ui;
 
 import java.io.BufferedReader;
-import java.io.ByteArrayInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-
-import javax.annotation.Nonnull;
+import java.io.Reader;
+import java.io.StringReader;
+import java.util.List;
 
 import android.app.AlertDialog;
 import android.app.Dialog;
@@ -38,16 +38,12 @@ import android.view.View;
 import android.widget.CheckBox;
 import android.widget.EditText;
 
-import com.google.bitcoin.core.Wallet;
-import com.google.bitcoin.core.Wallet.BalanceType;
-import com.google.bitcoin.store.UnreadableWalletException;
-import com.google.bitcoin.store.WalletProtobufSerializer;
+import com.google.worldcoin.core.ECKey;
+import com.google.worldcoin.core.Wallet;
 
-import de.schildbach.wallet.Configuration;
 import de.schildbach.wallet.Constants;
-import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet.util.Crypto;
-import de.schildbach.wallet.util.Io;
+import de.schildbach.wallet.util.WalletUtils;
 import de.schildbach.wallet_test.R;
 
 /**
@@ -57,8 +53,6 @@ public final class ImportKeysActivity extends AbstractWalletActivity
 {
 	private static final int DIALOG_IMPORT_KEYS = 0;
 
-	private WalletApplication application;
-	private Configuration config;
 	private Wallet wallet;
 	private ContentResolver contentResolver;
 
@@ -69,9 +63,7 @@ public final class ImportKeysActivity extends AbstractWalletActivity
 	{
 		super.onCreate(savedInstanceState);
 
-		application = getWalletApplication();
-		config = application.getConfiguration();
-		wallet = application.getWallet();
+		wallet = getWalletApplication().getWallet();
 		contentResolver = getContentResolver();
 
 		backupFileUri = getIntent().getData();
@@ -100,10 +92,12 @@ public final class ImportKeysActivity extends AbstractWalletActivity
 		final View view = getLayoutInflater().inflate(R.layout.import_keys_from_content_dialog, null);
 		final EditText passwordView = (EditText) view.findViewById(R.id.import_keys_from_content_dialog_password);
 
-		final DialogBuilder dialog = new DialogBuilder(this);
-		dialog.setTitle(R.string.import_keys_dialog_title);
-		dialog.setView(view);
-		dialog.setPositiveButton(R.string.import_keys_dialog_button_import, new OnClickListener()
+		final AlertDialog.Builder builder = new AlertDialog.Builder(this);
+		builder.setInverseBackgroundForced(true);
+		builder.setIcon(R.drawable.app_icon);
+		builder.setTitle(R.string.import_keys_dialog_title);
+		builder.setView(view);
+		builder.setPositiveButton(R.string.import_keys_dialog_button_import, new OnClickListener()
 		{
 			@Override
 			public void onClick(final DialogInterface dialog, final int which)
@@ -114,7 +108,7 @@ public final class ImportKeysActivity extends AbstractWalletActivity
 				try
 				{
 					final InputStream is = contentResolver.openInputStream(backupFileUri);
-					restoreWalletFromProtobuf(is, password);
+					importPrivateKeys(is, password);
 				}
 				catch (final FileNotFoundException x)
 				{
@@ -123,7 +117,7 @@ public final class ImportKeysActivity extends AbstractWalletActivity
 				}
 			}
 		});
-		dialog.setNegativeButton(R.string.button_cancel, new OnClickListener()
+		builder.setNegativeButton(R.string.button_cancel, new OnClickListener()
 		{
 			@Override
 			public void onClick(final DialogInterface dialog, final int which)
@@ -132,7 +126,7 @@ public final class ImportKeysActivity extends AbstractWalletActivity
 				finish();
 			}
 		});
-		dialog.setOnCancelListener(new OnCancelListener()
+		builder.setOnCancelListener(new OnCancelListener()
 		{
 			@Override
 			public void onCancel(final DialogInterface dialog)
@@ -142,16 +136,12 @@ public final class ImportKeysActivity extends AbstractWalletActivity
 			}
 		});
 
-		return dialog.create();
+		return builder.create();
 	}
 
 	private void prepareImportKeysDialog(final Dialog dialog)
 	{
 		final AlertDialog alertDialog = (AlertDialog) dialog;
-
-		final View replaceWarningView = alertDialog.findViewById(R.id.restore_wallet_from_content_dialog_replace_warning);
-		final boolean hasCoins = wallet.getBalance(BalanceType.ESTIMATED).signum() > 0;
-		replaceWarningView.setVisibility(hasCoins ? View.VISIBLE : View.GONE);
 
 		final EditText passwordView = (EditText) alertDialog.findViewById(R.id.import_keys_from_content_dialog_password);
 		passwordView.setText(null);
@@ -170,80 +160,80 @@ public final class ImportKeysActivity extends AbstractWalletActivity
 		showView.setOnCheckedChangeListener(new ShowPasswordCheckListener(passwordView));
 	}
 
-	private void restoreWalletFromProtobuf(@Nonnull final InputStream is, @Nonnull final String password)
+	private void importPrivateKeys(final InputStream is, final String password)
 	{
 		try
 		{
 			final BufferedReader cipherIn = new BufferedReader(new InputStreamReader(is, Constants.UTF_8));
 			final StringBuilder cipherText = new StringBuilder();
-			Io.copy(cipherIn, cipherText, Constants.BACKUP_MAX_CHARS);
+			while (true)
+			{
+				final String line = cipherIn.readLine();
+				if (line == null)
+					break;
+
+				cipherText.append(line);
+			}
 			cipherIn.close();
 
-			final byte[] plainText = Crypto.decryptBytes(cipherText.toString(), password.toCharArray());
-			final InputStream plainIs = new ByteArrayInputStream(plainText);
-			final Wallet wallet = new WalletProtobufSerializer().readWallet(plainIs);
-			plainIs.close();
+			final String plainText = Crypto.decrypt(cipherText.toString(), password.toCharArray());
+			final Reader plainReader = new StringReader(plainText);
 
-			if (!wallet.getParams().equals(Constants.NETWORK_PARAMETERS))
-				throw new UnreadableWalletException("bad wallet network parameters: " + wallet.getParams().getId());
+			final BufferedReader keyReader = new BufferedReader(plainReader);
+			final List<ECKey> importedKeys = WalletUtils.readKeys(keyReader);
+			keyReader.close();
 
-			application.replaceWallet(wallet);
+			final int numKeysToImport = importedKeys.size();
+			final int numKeysImported = wallet.addKeys(importedKeys);
 
-			config.disarmBackupReminder();
-
-			final DialogBuilder dialog = new DialogBuilder(this);
+			final AlertDialog.Builder dialog = new AlertDialog.Builder(this);
+			dialog.setInverseBackgroundForced(true);
 			final StringBuilder message = new StringBuilder();
-			message.append(getString(R.string.restore_wallet_dialog_success));
-			message.append("\n\n");
-			message.append(getString(R.string.import_keys_dialog_success_reset));
-			dialog.setMessage(message);
-			dialog.setPositiveButton(R.string.import_keys_dialog_button_reset_blockchain, new DialogInterface.OnClickListener()
+			if (numKeysImported > 0)
+				message.append(getString(R.string.import_keys_dialog_success_imported, numKeysImported));
+			if (numKeysImported < numKeysToImport)
 			{
-				@Override
-				public void onClick(final DialogInterface dialog, final int id)
+				if (message.length() > 0)
+					message.append('\n');
+				message.append(getString(R.string.import_keys_dialog_success_existing, numKeysToImport - numKeysImported));
+			}
+			if (numKeysImported > 0)
+			{
+				if (message.length() > 0)
+					message.append("\n\n");
+				message.append(getString(R.string.import_keys_dialog_success_reset));
+			}
+			dialog.setMessage(message);
+			if (numKeysImported > 0)
+			{
+				dialog.setPositiveButton(R.string.import_keys_dialog_button_reset_blockchain, new DialogInterface.OnClickListener()
 				{
-					getWalletApplication().resetBlockchain();
-					finish();
-				}
-			});
-			dialog.setNegativeButton(R.string.button_dismiss, finishListener).setOnCancelListener(finishListener);
+					@Override
+					public void onClick(final DialogInterface dialog, final int id)
+					{
+						getWalletApplication().resetBlockchain();
+						finish();
+					}
+				});
+				dialog.setNegativeButton(R.string.button_dismiss, finishListener);
+			}
+			else
+			{
+				dialog.setNeutralButton(R.string.button_dismiss, finishListener);
+			}
+			dialog.setOnCancelListener(finishListener);
 			dialog.show();
 
-			log.info("restored wallet from external source");
+			log.info("imported " + numKeysImported + " of " + numKeysToImport + " private keys");
 		}
 		catch (final IOException x)
 		{
-			final DialogBuilder dialog = DialogBuilder.warn(this, R.string.import_export_keys_dialog_failure_title);
-			dialog.setMessage(getString(R.string.import_keys_dialog_failure, x.getMessage()));
-			dialog.setPositiveButton(R.string.button_dismiss, finishListener).setOnCancelListener(finishListener);
-			dialog.setNegativeButton(R.string.button_retry, new DialogInterface.OnClickListener()
-			{
-				@Override
-				public void onClick(final DialogInterface dialog, final int id)
-				{
-					showDialog(DIALOG_IMPORT_KEYS);
-				}
-			});
-			dialog.show();
+			new AlertDialog.Builder(this).setInverseBackgroundForced(true).setIcon(android.R.drawable.ic_dialog_alert)
+					.setTitle(R.string.import_export_keys_dialog_failure_title)
+					.setMessage(getString(R.string.import_keys_dialog_failure, x.getMessage()))
+					.setNeutralButton(R.string.button_dismiss, finishListener).setOnCancelListener(finishListener).show();
 
-			log.info("problem restoring wallet", x);
-		}
-		catch (final UnreadableWalletException x)
-		{
-			final DialogBuilder dialog = DialogBuilder.warn(this, R.string.import_export_keys_dialog_failure_title);
-			dialog.setMessage(getString(R.string.import_keys_dialog_failure, x.getMessage()));
-			dialog.setPositiveButton(R.string.button_dismiss, finishListener).setOnCancelListener(finishListener);
-			dialog.setNegativeButton(R.string.button_retry, new DialogInterface.OnClickListener()
-			{
-				@Override
-				public void onClick(final DialogInterface dialog, final int id)
-				{
-					showDialog(DIALOG_IMPORT_KEYS);
-				}
-			});
-			dialog.show();
-
-			log.info("problem restoring wallet", x);
+			log.info("problem reading private keys", x);
 		}
 	}
 

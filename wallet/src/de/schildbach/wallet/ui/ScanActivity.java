@@ -25,6 +25,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import android.app.Activity;
+import android.app.AlertDialog;
 import android.app.Dialog;
 import android.content.Context;
 import android.content.DialogInterface;
@@ -80,9 +81,8 @@ public final class ScanActivity extends Activity implements SurfaceHolder.Callba
 	private static final int DIALOG_CAMERA_PROBLEM = 0;
 
 	private static boolean DISABLE_CONTINUOUS_AUTOFOCUS = Build.MODEL.equals("GT-I9100") // Galaxy S2
-			|| Build.MODEL.equals("SGH-T989") // Galaxy S2
-			|| Build.MODEL.equals("SGH-T989D") // Galaxy S2 X
 			|| Build.MODEL.equals("SAMSUNG-SGH-I727") // Galaxy S2 Skyrocket
+			|| Build.MODEL.equals("SGH-T989") // Galaxy S2 X
 			|| Build.MODEL.equals("GT-I9300") // Galaxy S3
 			|| Build.MODEL.equals("GT-N7000"); // Galaxy Note
 
@@ -361,11 +361,14 @@ public final class ScanActivity extends Activity implements SurfaceHolder.Callba
 	@Override
 	protected Dialog onCreateDialog(final int id)
 	{
+		final AlertDialog.Builder builder = new AlertDialog.Builder(this);
+
 		if (id == DIALOG_CAMERA_PROBLEM)
 		{
-			final DialogBuilder dialog = DialogBuilder.warn(this, R.string.scan_camera_problem_dialog_title);
-			dialog.setMessage(R.string.scan_camera_problem_dialog_message);
-			dialog.singleDismissButton(new OnClickListener()
+			builder.setIcon(android.R.drawable.ic_dialog_alert);
+			builder.setTitle(R.string.scan_camera_problem_dialog_title);
+			builder.setMessage(R.string.scan_camera_problem_dialog_message);
+			builder.setNeutralButton(R.string.button_dismiss, new OnClickListener()
 			{
 				@Override
 				public void onClick(final DialogInterface dialog, final int which)
@@ -373,7 +376,7 @@ public final class ScanActivity extends Activity implements SurfaceHolder.Callba
 					finish();
 				}
 			});
-			dialog.setOnCancelListener(new OnCancelListener()
+			builder.setOnCancelListener(new OnCancelListener()
 			{
 				@Override
 				public void onCancel(final DialogInterface dialog)
@@ -381,12 +384,8 @@ public final class ScanActivity extends Activity implements SurfaceHolder.Callba
 					finish();
 				}
 			});
+		}
 
-			return dialog.create();
-		}
-		else
-		{
-			throw new IllegalArgumentException();
-		}
+		return builder.create();
 	}
 }

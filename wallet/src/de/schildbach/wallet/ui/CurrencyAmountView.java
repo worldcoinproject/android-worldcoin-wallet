@@ -18,6 +18,7 @@
 package de.schildbach.wallet.ui;
 
 import java.math.BigInteger;
+import java.util.Currency;
 
 import javax.annotation.CheckForNull;
 import javax.annotation.Nonnull;
@@ -31,18 +32,20 @@ import android.os.Bundle;
 import android.os.Parcelable;
 import android.text.Editable;
 import android.text.InputType;
-import android.text.Spannable;
-import android.text.SpannableString;
+import android.text.SpannableStringBuilder;
 import android.text.TextWatcher;
 import android.util.AttributeSet;
 import android.view.Gravity;
+import android.view.KeyEvent;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.inputmethod.EditorInfo;
 import android.widget.EditText;
 import android.widget.FrameLayout;
 import android.widget.TextView;
+import android.widget.TextView.OnEditorActionListener;
 
-import com.google.bitcoin.core.Transaction;
+import com.google.worldcoin.core.Transaction;
 
 import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.util.GenericUtils;
@@ -58,16 +61,19 @@ public final class CurrencyAmountView extends FrameLayout
 	{
 		void changed();
 
+		void done();
+
 		void focusChanged(final boolean hasFocus);
 	}
 
 	private int significantColor, lessSignificantColor, errorColor;
 	private Drawable deleteButtonDrawable, contextButtonDrawable;
 	private Drawable currencySymbolDrawable;
-	private int inputPrecision = 2;
-	private int hintPrecision = 2;
+	private int inputPrecision = 0;
+	private int hintPrecision = 0;
 	private int shift = 0;
 	private boolean amountSigned = false;
+	private boolean smallerInsignificant = true;
 	private boolean validateAmount = true;
 
 	private TextView textView;
@@ -112,6 +118,7 @@ public final class CurrencyAmountView extends FrameLayout
 		setValidateAmount(textView instanceof EditText);
 		textView.addTextChangedListener(textViewListener);
 		textView.setOnFocusChangeListener(textViewListener);
+		textView.setOnEditorActionListener(textViewListener);
 
 		contextButton = new View(context)
 		{
@@ -139,15 +146,11 @@ public final class CurrencyAmountView extends FrameLayout
 		{
 			currencySymbolDrawable = getResources().getDrawable(R.drawable.currency_symbol_mbtc);
 		}
-		else if (Constants.CURRENCY_CODE_UBTC.equals(currencyCode))
-		{
-			currencySymbolDrawable = getResources().getDrawable(R.drawable.currency_symbol_ubtc);
-		}
 		else if (currencyCode != null)
 		{
-			final String currencySymbol = GenericUtils.currencySymbol(currencyCode);
+			final String currencySymbol = currencySymbol(currencyCode);
 			final float textSize = textView.getTextSize();
-			final float smallerTextSize = textSize * (20f / 24f);
+			final float smallerTextSize = textSize * (smallerInsignificant ? (20f / 24f) : 1);
 			currencySymbolDrawable = new CurrencySymbolDrawable(currencySymbol, smallerTextSize, lessSignificantColor, textSize * 0.37f);
 		}
 		else
@@ -178,6 +181,11 @@ public final class CurrencyAmountView extends FrameLayout
 		this.amountSigned = amountSigned;
 	}
 
+	public void setSmallerInsignificant(final boolean smallerInsignificant)
+	{
+		this.smallerInsignificant = smallerInsignificant;
+	}
+
 	public void setValidateAmount(final boolean validateAmount)
 	{
 		this.validateAmount = validateAmount;
@@ -200,7 +208,7 @@ public final class CurrencyAmountView extends FrameLayout
 	public BigInteger getAmount()
 	{
 		if (isValidAmount(false))
-			return GenericUtils.parseCoin(textView.getText().toString().trim(), shift);
+			return GenericUtils.toNanoCoins(textView.getText().toString().trim(), shift);
 		else
 			return null;
 	}
@@ -222,8 +230,13 @@ public final class CurrencyAmountView extends FrameLayout
 
 	public void setHint(@Nullable final BigInteger amount)
 	{
-		final Spannable hint = new SpannableString(GenericUtils.formatValue(amount != null ? amount : BigInteger.ZERO, hintPrecision, shift));
-		WalletUtils.formatSignificant(hint, WalletUtils.SMALLER_SPAN);
+		final SpannableStringBuilder hint;
+		if (amount != null)
+			hint = new SpannableStringBuilder(GenericUtils.formatValue(amount, hintPrecision, shift));
+		else
+			hint = new SpannableStringBuilder("0.00");
+
+		WalletUtils.formatSignificant(hint, smallerInsignificant ? WalletUtils.SMALLER_SPAN : null);
 		textView.setHint(hint);
 	}
 
@@ -252,33 +265,22 @@ public final class CurrencyAmountView extends FrameLayout
 			textView.setPaintFlags(textView.getPaintFlags() & ~Paint.STRIKE_THRU_TEXT_FLAG);
 	}
 
-	public TextView getTextView()
-	{
-		return textView;
-	}
-
-	public void setNextFocusId(final int nextFocusId)
-	{
-		textView.setNextFocusDownId(nextFocusId);
-		GenericUtils.setNextFocusForwardId(textView, nextFocusId);
-	}
-
 	private boolean isValidAmount(final boolean zeroIsValid)
 	{
-		final String str = textView.getText().toString().trim();
+		final String amount = textView.getText().toString().trim();
 
 		try
 		{
-			if (!str.isEmpty())
+			if (!amount.isEmpty())
 			{
-				final BigInteger coin = GenericUtils.parseCoin(str, shift);
+				final BigInteger nanoCoins = GenericUtils.toNanoCoins(amount, shift);
 
 				// exactly zero
-				if (zeroIsValid && coin.signum() == 0)
+				if (zeroIsValid && nanoCoins.signum() == 0)
 					return true;
 
 				// too small
-				if (coin.compareTo(Transaction.MIN_NONDUST_OUTPUT) < 0)
+				if (nanoCoins.compareTo(Transaction.MIN_NONDUST_OUTPUT) < 0)
 					return false;
 
 				return true;
@@ -358,7 +360,7 @@ public final class CurrencyAmountView extends FrameLayout
 
 	private final TextViewListener textViewListener = new TextViewListener();
 
-	private final class TextViewListener implements TextWatcher, OnFocusChangeListener
+	private final class TextViewListener implements TextWatcher, OnFocusChangeListener, OnEditorActionListener
 	{
 		private boolean fire = true;
 
@@ -379,7 +381,7 @@ public final class CurrencyAmountView extends FrameLayout
 				s.append(replaced);
 			}
 
-			WalletUtils.formatSignificant(s, WalletUtils.SMALLER_SPAN);
+			WalletUtils.formatSignificant(s, smallerInsignificant ? WalletUtils.SMALLER_SPAN : null);
 		}
 
 		@Override
@@ -407,6 +409,28 @@ public final class CurrencyAmountView extends FrameLayout
 
 			if (listener != null && fire)
 				listener.focusChanged(hasFocus);
+		}
+
+		@Override
+		public boolean onEditorAction(final TextView v, final int actionId, final KeyEvent event)
+		{
+			if (actionId == EditorInfo.IME_ACTION_DONE && listener != null && fire)
+				listener.done();
+
+			return false;
+		}
+	}
+
+	private static String currencySymbol(@Nonnull final String currencyCode)
+	{
+		try
+		{
+			final Currency currency = Currency.getInstance(currencyCode);
+			return currency.getSymbol();
+		}
+		catch (final IllegalArgumentException x)
+		{
+			return currencyCode;
 		}
 	}
 }

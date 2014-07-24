@@ -18,6 +18,7 @@
 package de.schildbach.wallet.service;
 
 import java.io.File;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.math.BigInteger;
@@ -51,39 +52,41 @@ import android.content.SharedPreferences;
 import android.content.SharedPreferences.OnSharedPreferenceChangeListener;
 import android.net.ConnectivityManager;
 import android.net.Uri;
+import android.net.wifi.WifiManager;
+import android.net.wifi.WifiManager.WifiLock;
 import android.os.Binder;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.PowerManager;
 import android.os.PowerManager.WakeLock;
+import android.preference.PreferenceManager;
 import android.support.v4.app.NotificationCompat;
 import android.text.format.DateUtils;
 
-import com.google.bitcoin.core.AbstractPeerEventListener;
-import com.google.bitcoin.core.Address;
-import com.google.bitcoin.core.Block;
-import com.google.bitcoin.core.BlockChain;
-import com.google.bitcoin.core.CheckpointManager;
-import com.google.bitcoin.core.Peer;
-import com.google.bitcoin.core.PeerEventListener;
-import com.google.bitcoin.core.PeerGroup;
-import com.google.bitcoin.core.Sha256Hash;
-import com.google.bitcoin.core.StoredBlock;
-import com.google.bitcoin.core.Transaction;
-import com.google.bitcoin.core.TransactionConfidence.ConfidenceType;
-import com.google.bitcoin.core.Wallet;
-import com.google.bitcoin.core.Wallet.BalanceType;
-import com.google.bitcoin.core.WalletEventListener;
-import com.google.bitcoin.net.discovery.DnsDiscovery;
-import com.google.bitcoin.net.discovery.PeerDiscovery;
-import com.google.bitcoin.net.discovery.PeerDiscoveryException;
-import com.google.bitcoin.store.BlockStore;
-import com.google.bitcoin.store.BlockStoreException;
-import com.google.bitcoin.store.SPVBlockStore;
-import com.google.bitcoin.utils.Threading;
+import com.google.worldcoin.core.AbstractPeerEventListener;
+import com.google.worldcoin.core.Address;
+import com.google.worldcoin.core.Block;
+import com.google.worldcoin.core.BlockChain;
+import com.google.worldcoin.core.CheckpointManager;
+import com.google.worldcoin.core.Peer;
+import com.google.worldcoin.core.PeerEventListener;
+import com.google.worldcoin.core.PeerGroup;
+import com.google.worldcoin.core.ScriptException;
+import com.google.worldcoin.core.Sha256Hash;
+import com.google.worldcoin.core.StoredBlock;
+import com.google.worldcoin.core.Transaction;
+import com.google.worldcoin.core.TransactionConfidence.ConfidenceType;
+import com.google.worldcoin.core.Wallet;
+import com.google.worldcoin.core.Wallet.BalanceType;
+import com.google.worldcoin.core.WalletEventListener;
+import com.google.worldcoin.net.discovery.DnsDiscovery;
+import com.google.worldcoin.net.discovery.PeerDiscovery;
+import com.google.worldcoin.net.discovery.PeerDiscoveryException;
+import com.google.worldcoin.store.BlockStore;
+import com.google.worldcoin.store.BlockStoreException;
+import com.google.worldcoin.store.SPVBlockStore;
 
 import de.schildbach.wallet.AddressBookProvider;
-import de.schildbach.wallet.Configuration;
 import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet.WalletBalanceWidgetProvider;
@@ -94,13 +97,14 @@ import de.schildbach.wallet.util.ThrottlingWalletChangeListener;
 import de.schildbach.wallet.util.WalletUtils;
 import de.schildbach.wallet_test.R;
 
+
 /**
  * @author Andreas Schildbach
  */
 public class BlockchainServiceImpl extends android.app.Service implements BlockchainService
 {
 	private WalletApplication application;
-	private Configuration config;
+	private SharedPreferences prefs;
 
 	private BlockStore blockStore;
 	private File blockChainFile;
@@ -111,6 +115,7 @@ public class BlockchainServiceImpl extends android.app.Service implements Blockc
 	private final Handler handler = new Handler();
 	private final Handler delayHandler = new Handler();
 	private WakeLock wakeLock;
+	private WifiLock wifiLock;
 
 	private PeerConnectivityListener peerConnectivityListener;
 	private NotificationManager nm;
@@ -125,9 +130,9 @@ public class BlockchainServiceImpl extends android.app.Service implements Blockc
 	private long serviceCreatedAt;
 	private boolean resetBlockchainOnShutdown = false;
 
-	private static final int MIN_COLLECT_HISTORY = 2;
+	private static final int MIN_COLLECT_HISTORY = 1;
 	private static final int IDLE_BLOCK_TIMEOUT_MIN = 2;
-	private static final int IDLE_TRANSACTION_TIMEOUT_MIN = 9;
+	private static final int IDLE_TRANSACTION_TIMEOUT_MIN = 3;
 	private static final int MAX_HISTORY_SIZE = Math.max(IDLE_TRANSACTION_TIMEOUT_MIN, IDLE_BLOCK_TIMEOUT_MIN);
 	private static final long APPWIDGET_THROTTLE_MS = DateUtils.SECOND_IN_MILLIS;
 
@@ -148,23 +153,30 @@ public class BlockchainServiceImpl extends android.app.Service implements Blockc
 
 			final int bestChainHeight = blockChain.getBestChainHeight();
 
-			final Address from = WalletUtils.getFirstFromAddress(tx);
-			final BigInteger amount = tx.getValue(wallet);
-			final ConfidenceType confidenceType = tx.getConfidence().getConfidenceType();
-
-			handler.post(new Runnable()
+			try
 			{
-				@Override
-				public void run()
-				{
-					final boolean isReceived = amount.signum() > 0;
-					final boolean replaying = bestChainHeight < bestChainHeightEver;
-					final boolean isReplayedTx = confidenceType == ConfidenceType.BUILDING && replaying;
+				final Address from = WalletUtils.getFirstFromAddress(tx);
+				final BigInteger amount = tx.getValue(wallet);
+				final ConfidenceType confidenceType = tx.getConfidence().getConfidenceType();
 
-					if (isReceived && !isReplayedTx)
-						notifyCoinsReceived(from, amount);
-				}
-			});
+				handler.post(new Runnable()
+				{
+					@Override
+					public void run()
+					{
+						final boolean isReceived = amount.signum() > 0;
+						final boolean replaying = bestChainHeight < bestChainHeightEver;
+						final boolean isReplayedTx = confidenceType == ConfidenceType.BUILDING && replaying;
+
+						if (isReceived && !isReplayedTx)
+							notifyCoinsReceived(from, amount);
+					}
+				});
+			}
+			catch (final ScriptException x)
+			{
+				throw new RuntimeException(x);
+			}
 		}
 
 		@Override
@@ -172,6 +184,8 @@ public class BlockchainServiceImpl extends android.app.Service implements Blockc
 		{
 			transactionsReceived.incrementAndGet();
 		}
+		
+		public void onScriptsAdded(Wallet wallet, List<com.google.worldcoin.script.Script> scripts){}
 	};
 
 	private void notifyCoinsReceived(@Nullable final Address from, @Nonnull final BigInteger amount)
@@ -184,9 +198,10 @@ public class BlockchainServiceImpl extends android.app.Service implements Blockc
 		if (from != null && !notificationAddresses.contains(from))
 			notificationAddresses.add(from);
 
-		final int btcPrecision = config.getBtcPrecision();
-		final int btcShift = config.getBtcShift();
-		final String btcPrefix = config.getBtcPrefix();
+		final String precision = prefs.getString(Constants.PREFS_KEY_BTC_PRECISION, Constants.PREFS_DEFAULT_BTC_PRECISION);
+		final int btcPrecision = precision.charAt(0) - '0';
+		final int btcShift = precision.length() == 3 ? precision.charAt(2) - '0' : 0;
+		final String btcPrefix = btcShift == 0 ? Constants.CURRENCY_CODE_BTC : Constants.CURRENCY_CODE_MBTC;
 
 		final String packageFlavor = application.applicationPackageFlavor();
 		final String msgSuffix = packageFlavor != null ? " [" + packageFlavor + "]" : "";
@@ -230,14 +245,14 @@ public class BlockchainServiceImpl extends android.app.Service implements Blockc
 
 		public PeerConnectivityListener()
 		{
-			config.registerOnSharedPreferenceChangeListener(this);
+			prefs.registerOnSharedPreferenceChangeListener(this);
 		}
 
 		public void stop()
 		{
 			stopped.set(true);
 
-			config.unregisterOnSharedPreferenceChangeListener(this);
+			prefs.unregisterOnSharedPreferenceChangeListener(this);
 
 			nm.cancel(NOTIFICATION_ID_CONNECTED);
 		}
@@ -259,7 +274,7 @@ public class BlockchainServiceImpl extends android.app.Service implements Blockc
 		@Override
 		public void onSharedPreferenceChanged(final SharedPreferences sharedPreferences, final String key)
 		{
-			if (Configuration.PREFS_KEY_CONNECTIVITY_NOTIFICATION.equals(key))
+			if (Constants.PREFS_KEY_CONNECTIVITY_NOTIFICATION.equals(key))
 				changed(peerCount);
 		}
 
@@ -273,9 +288,9 @@ public class BlockchainServiceImpl extends android.app.Service implements Blockc
 				@Override
 				public void run()
 				{
-					final boolean connectivityNotificationEnabled = config.getConnectivityNotificationEnabled();
+					final boolean connectivityNotification = prefs.getBoolean(Constants.PREFS_KEY_CONNECTIVITY_NOTIFICATION, false);
 
-					if (!connectivityNotificationEnabled || numPeers == 0)
+					if (!connectivityNotification || numPeers == 0)
 					{
 						nm.cancel(NOTIFICATION_ID_CONNECTED);
 					}
@@ -392,12 +407,13 @@ public class BlockchainServiceImpl extends android.app.Service implements Blockc
 
 				final int maxConnectedPeers = application.maxConnectedPeers();
 
-				final String trustedPeerHost = config.getTrustedPeerHost();
+				final String trustedPeerHost = prefs.getString(Constants.PREFS_KEY_TRUSTED_PEER, "").trim();
 				final boolean hasTrustedPeer = !trustedPeerHost.isEmpty();
 
-				final boolean connectTrustedPeerOnly = hasTrustedPeer && config.getTrustedPeerOnly();
+				final boolean connectTrustedPeerOnly = hasTrustedPeer && prefs.getBoolean(Constants.PREFS_KEY_TRUSTED_PEER_ONLY, false);
 				peerGroup.setMaxConnections(connectTrustedPeerOnly ? 1 : maxConnectedPeers);
 
+				
 				peerGroup.addPeerDiscovery(new PeerDiscovery()
 				{
 					private final PeerDiscovery normalPeerDiscovery = new DnsDiscovery(Constants.NETWORK_PARAMETERS);
@@ -411,7 +427,7 @@ public class BlockchainServiceImpl extends android.app.Service implements Blockc
 
 						if (hasTrustedPeer)
 						{
-							log.info("trusted peer '" + trustedPeerHost + "'" + (connectTrustedPeerOnly ? " only" : ""));
+//							log.info("trusted peer '" + trustedPeerHost + "'" + (connectTrustedPeerOnly ? " only" : ""));
 
 							final InetSocketAddress addr = new InetSocketAddress(trustedPeerHost, Constants.NETWORK_PARAMETERS.getPort());
 							if (addr.getAddress() != null)
@@ -438,7 +454,9 @@ public class BlockchainServiceImpl extends android.app.Service implements Blockc
 						normalPeerDiscovery.shutdown();
 					}
 				});
+				
 
+		//		peerGroup.addPeerDiscovery(new com.google.worldcoin.net.discovery.SeedPeers(Constants.NETWORK_PARAMETERS));
 				// start peergroup
 				peerGroup.start();
 				peerGroup.startBlockChainDownload(blockchainDownloadListener);
@@ -584,11 +602,15 @@ public class BlockchainServiceImpl extends android.app.Service implements Blockc
 		final PowerManager pm = (PowerManager) getSystemService(Context.POWER_SERVICE);
 		wakeLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, lockName);
 
+		final WifiManager wifiManager = (WifiManager) getSystemService(Context.WIFI_SERVICE);
+		wifiLock = wifiManager.createWifiLock(WifiManager.WIFI_MODE_FULL, lockName);
+		wifiLock.setReferenceCounted(false);
+
 		application = (WalletApplication) getApplication();
-		config = application.getConfiguration();
+		prefs = PreferenceManager.getDefaultSharedPreferences(this);
 		final Wallet wallet = application.getWallet();
 
-		bestChainHeightEver = config.getBestChainHeightEver();
+		bestChainHeightEver = prefs.getInt(Constants.PREFS_KEY_BEST_CHAIN_HEIGHT_EVER, 0);
 
 		peerConnectivityListener = new PeerConnectivityListener();
 
@@ -600,7 +622,7 @@ public class BlockchainServiceImpl extends android.app.Service implements Blockc
 		intentFilter.addAction(Intent.ACTION_DEVICE_STORAGE_OK);
 		registerReceiver(connectivityReceiver, intentFilter);
 
-		blockChainFile = new File(getDir("blockstore", Context.MODE_PRIVATE), Constants.Files.BLOCKCHAIN_FILENAME);
+		blockChainFile = new File(getDir("blockstore", Context.MODE_PRIVATE), Constants.BLOCKCHAIN_FILENAME);
 		final boolean blockChainFileExists = blockChainFile.exists();
 
 		if (!blockChainFileExists)
@@ -623,7 +645,7 @@ public class BlockchainServiceImpl extends android.app.Service implements Blockc
 			{
 				try
 				{
-					final InputStream checkpointsInputStream = getAssets().open(Constants.Files.CHECKPOINTS_FILENAME);
+					final InputStream checkpointsInputStream = getAssets().open(Constants.CHECKPOINTS_FILENAME);
 					CheckpointManager.checkpoint(Constants.NETWORK_PARAMETERS, checkpointsInputStream, blockStore, earliestKeyCreationTime);
 				}
 				catch (final IOException x)
@@ -652,7 +674,7 @@ public class BlockchainServiceImpl extends android.app.Service implements Blockc
 			throw new Error("blockchain cannot be created", x);
 		}
 
-		application.getWallet().addEventListener(walletEventListener, Threading.SAME_THREAD);
+		application.getWallet().addEventListener(walletEventListener, com.google.worldcoin.utils.Threading.SAME_THREAD);
 
 		registerReceiver(tickReceiver, new IntentFilter(Intent.ACTION_TIME_TICK));
 
@@ -662,47 +684,50 @@ public class BlockchainServiceImpl extends android.app.Service implements Blockc
 	@Override
 	public int onStartCommand(final Intent intent, final int flags, final int startId)
 	{
-		if (intent != null)
+		final String action = intent.getAction();
+
+		if (BlockchainService.ACTION_CANCEL_COINS_RECEIVED.equals(action))
 		{
-			log.info("service start command: " + intent
-					+ (intent.hasExtra(Intent.EXTRA_ALARM_COUNT) ? " (alarm count: " + intent.getIntExtra(Intent.EXTRA_ALARM_COUNT, 0) + ")" : ""));
+			notificationCount = 0;
+			notificationAccumulatedAmount = BigInteger.ZERO;
+			notificationAddresses.clear();
 
-			final String action = intent.getAction();
+			nm.cancel(NOTIFICATION_ID_COINS_RECEIVED);
+		}
 
-			if (BlockchainService.ACTION_CANCEL_COINS_RECEIVED.equals(action))
-			{
-				notificationCount = 0;
-				notificationAccumulatedAmount = BigInteger.ZERO;
-				notificationAddresses.clear();
-
-				nm.cancel(NOTIFICATION_ID_COINS_RECEIVED);
-			}
-			else if (BlockchainService.ACTION_RESET_BLOCKCHAIN.equals(action))
-			{
-				log.info("will remove blockchain on service shutdown");
-
-				resetBlockchainOnShutdown = true;
-				stopSelf();
-			}
-			else if (BlockchainService.ACTION_BROADCAST_TRANSACTION.equals(action))
-			{
-				final Sha256Hash hash = new Sha256Hash(intent.getByteArrayExtra(BlockchainService.ACTION_BROADCAST_TRANSACTION_HASH));
-				final Transaction tx = application.getWallet().getTransaction(hash);
-
-				if (peerGroup != null)
-				{
-					log.info("broadcasting transaction " + tx.getHashAsString());
-					peerGroup.broadcastTransaction(tx);
-				}
-				else
-				{
-					log.info("peergroup not available, not broadcasting transaction " + tx.getHashAsString());
-				}
-			}
+		if (BlockchainService.ACTION_HOLD_WIFI_LOCK.equals(action))
+		{
+			log.debug("acquiring wifilock");
+			wifiLock.acquire();
 		}
 		else
 		{
-			log.warn("service restart, although it was started as non-sticky");
+			log.debug("releasing wifilock");
+			wifiLock.release();
+		}
+
+		if (BlockchainService.ACTION_RESET_BLOCKCHAIN.equals(action))
+		{
+			log.info("will remove blockchain on service shutdown");
+
+			resetBlockchainOnShutdown = true;
+			stopSelf();
+		}
+
+		if (BlockchainService.ACTION_BROADCAST_TRANSACTION.equals(action))
+		{
+			final Sha256Hash hash = new Sha256Hash(intent.getByteArrayExtra(BlockchainService.ACTION_BROADCAST_TRANSACTION_HASH));
+			final Transaction tx = application.getWallet().getTransaction(hash);
+
+			if (peerGroup != null)
+			{
+				log.info("broadcasting transaction " + tx.getHashAsString());
+				peerGroup.broadcastTransaction(tx);
+			}
+			else
+			{
+				log.info("peergroup not available, not broadcasting transaction " + tx.getHashAsString());
+			}
 		}
 
 		return START_NOT_STICKY;
@@ -713,8 +738,8 @@ public class BlockchainServiceImpl extends android.app.Service implements Blockc
 	{
 		log.debug(".onDestroy()");
 
-		WalletApplication.scheduleStartBlockchainService(this);
-
+	//	WalletApplication.scheduleStartBlockchainService(this);
+		
 		unregisterReceiver(tickReceiver);
 
 		application.getWallet().removeEventListener(walletEventListener);
@@ -735,7 +760,7 @@ public class BlockchainServiceImpl extends android.app.Service implements Blockc
 		removeBroadcastPeerState();
 		removeBroadcastBlockchainState();
 
-		config.setBestChainHeightEver(bestChainHeightEver);
+		prefs.edit().putInt(Constants.PREFS_KEY_BEST_CHAIN_HEIGHT_EVER, bestChainHeightEver).commit();
 
 		delayHandler.removeCallbacksAndMessages(null);
 
@@ -754,6 +779,12 @@ public class BlockchainServiceImpl extends android.app.Service implements Blockc
 		{
 			log.debug("wakelock still held, releasing");
 			wakeLock.release();
+		}
+
+		if (wifiLock.isHeld())
+		{
+			log.debug("wifilock still held, releasing");
+			wifiLock.release();
 		}
 
 		if (resetBlockchainOnShutdown)

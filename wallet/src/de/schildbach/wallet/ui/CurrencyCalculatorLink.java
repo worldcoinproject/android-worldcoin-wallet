@@ -47,12 +47,25 @@ public final class CurrencyCalculatorLink
 		public void changed()
 		{
 			if (btcAmountView.getAmount() != null)
-				setExchangeDirection(true);
+			{
+				exchangeDirection = true;
+
+				update();
+			}
 			else
+			{
 				localAmountView.setHint(null);
+			}
 
 			if (listener != null)
 				listener.changed();
+		}
+
+		@Override
+		public void done()
+		{
+			if (listener != null)
+				listener.done();
 		}
 
 		@Override
@@ -69,12 +82,25 @@ public final class CurrencyCalculatorLink
 		public void changed()
 		{
 			if (localAmountView.getAmount() != null)
-				setExchangeDirection(false);
+			{
+				exchangeDirection = false;
+
+				update();
+			}
 			else
+			{
 				btcAmountView.setHint(null);
+			}
 
 			if (listener != null)
 				listener.changed();
+		}
+
+		@Override
+		public void done()
+		{
+			if (listener != null)
+				listener.done();
 		}
 
 		@Override
@@ -133,11 +159,6 @@ public final class CurrencyCalculatorLink
 		}
 	}
 
-	public boolean hasAmount()
-	{
-		return getAmount() != null;
-	}
-
 	private void update()
 	{
 		btcAmountView.setEnabled(enabled);
@@ -171,49 +192,24 @@ public final class CurrencyCalculatorLink
 		else
 		{
 			localAmountView.setEnabled(false);
-			localAmountView.setHint(null);
-			btcAmountView.setHint(null);
 		}
 	}
 
-	public void setExchangeDirection(final boolean exchangeDirection)
-	{
-		this.exchangeDirection = exchangeDirection;
-
-		update();
-	}
-
-	public boolean getExchangeDirection()
-	{
-		return exchangeDirection;
-	}
-
-	public View activeTextView()
+	public View activeView()
 	{
 		if (exchangeDirection)
-			return btcAmountView.getTextView();
+			return btcAmountView;
 		else
-			return localAmountView.getTextView();
+			return localAmountView;
 	}
 
 	public void requestFocus()
 	{
-		activeTextView().requestFocus();
+		activeView().requestFocus();
 	}
 
 	public void setBtcAmount(@Nonnull final BigInteger amount)
 	{
-		final Listener listener = this.listener;
-		this.listener = null;
-
 		btcAmountView.setAmount(amount, true);
-
-		this.listener = listener;
-	}
-
-	public void setNextFocusId(final int nextFocusId)
-	{
-		btcAmountView.setNextFocusId(nextFocusId);
-		localAmountView.setNextFocusId(nextFocusId);
 	}
 }

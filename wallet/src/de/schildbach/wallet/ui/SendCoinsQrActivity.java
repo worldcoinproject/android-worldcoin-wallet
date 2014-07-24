@@ -17,7 +17,7 @@
 
 package de.schildbach.wallet.ui;
 
-import javax.annotation.Nonnull;
+import java.math.BigInteger;
 
 import android.app.Activity;
 import android.content.DialogInterface;
@@ -25,20 +25,15 @@ import android.content.DialogInterface.OnClickListener;
 import android.content.Intent;
 import android.os.Bundle;
 
-import com.google.bitcoin.core.ECKey;
-import com.google.bitcoin.core.Transaction;
-import com.google.bitcoin.core.VerificationException;
+import com.google.worldcoin.core.Address;
+import com.google.worldcoin.core.Transaction;
 
-import de.schildbach.wallet.WalletApplication;
-import de.schildbach.wallet.data.PaymentIntent;
 import de.schildbach.wallet.ui.InputParser.StringInputParser;
-import de.schildbach.wallet.ui.send.SendCoinsActivity;
-import de.schildbach.wallet.ui.send.SweepWalletActivity;
 
 /**
  * @author Andreas Schildbach
  */
-public final class SendCoinsQrActivity extends Activity
+public final class SendCoinsQrActivity extends AbstractOnDemandServiceActivity
 {
 	private static final int REQUEST_CODE_SCAN = 0;
 
@@ -60,26 +55,18 @@ public final class SendCoinsQrActivity extends Activity
 			new StringInputParser(input)
 			{
 				@Override
-				protected void handlePaymentIntent(@Nonnull final PaymentIntent paymentIntent)
+				protected void bitcoinRequest(final Address address, final String addressLabel, final BigInteger amount, final String bluetoothMac)
 				{
-					SendCoinsActivity.start(SendCoinsQrActivity.this, paymentIntent);
+					SendCoinsActivity
+							.start(SendCoinsQrActivity.this, address != null ? address.toString() : null, addressLabel, amount, bluetoothMac);
 
 					SendCoinsQrActivity.this.finish();
 				}
 
 				@Override
-				protected void handlePrivateKey(@Nonnull final ECKey key)
+				protected void directTransaction(final Transaction transaction)
 				{
-					SweepWalletActivity.start(SendCoinsQrActivity.this, key);
-
-					SendCoinsQrActivity.this.finish();
-				}
-
-				@Override
-				protected void handleDirectTransaction(final Transaction transaction) throws VerificationException
-				{
-					final WalletApplication application = (WalletApplication) getApplication();
-					application.processDirectTransaction(transaction);
+					processDirectTransaction(transaction);
 
 					SendCoinsQrActivity.this.finish();
 				}

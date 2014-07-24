@@ -135,12 +135,12 @@ public class AddressBookProvider extends ContentProvider
 	}
 
 	@Override
-	public Cursor query(final Uri uri, final String[] projection, final String originalSelection, final String[] originalSelectionArgs,
+	public Cursor query(final Uri uri, final String[] projection, final String originalSelection,  final String[] originalSelectionArgs,
 			final String sortOrder)
 	{
 		final SQLiteQueryBuilder qb = new SQLiteQueryBuilder();
 		qb.setTables(DATABASE_TABLE);
-
+		
 		final List<String> pathSegments = uri.getPathSegments();
 		if (pathSegments.size() > 1)
 			throw new IllegalArgumentException(uri.toString());

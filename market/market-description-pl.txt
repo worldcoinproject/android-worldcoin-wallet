@@ -1,22 +1,20 @@
-Miej swoje Bitcoiny zawsze w swojej kieszeni! Zapłacisz skanując kod QR. Jako sprzedawca odbierzesz płatności niezawodnie i natychmiastowo. Bitcoin Wallet jest pierwszą aplikacją Bitcoinową na telefony i niezaprzeczalnie najbezpieczniejszą.
+Samodzielny portfel Worldcoin dla Twojego urządzenia Android. Możesz wysyłać Worldcoin pomiędzy telefonami skanując kod QR, który jest wyświetlany przez aplikacje, lub przez NFC (Near Field Communication).
 
-WŁAŚCIWOŚCI:
+FUNKCJE:
 
-• Brak konieczności rejestracji, serwisu online lub chmury! Ten portfel używa zdecentralizowanej sieci peer-to-peer.
-• Wyświetl ilość kwotę w BTC i mBTC.
-• Zamiana z i na waluty narodowe
-• Wysyłąnie i odbieranie Bitcoin za pomocą NFC, kodów QR czy adresów Bitcoin URL.
-• Książka adresowa dla regularnie używanych adresów Bitcoin.
-• Gdy jesteś offline, wciąż możesz zapłacić przy użyciu Bluetooth.
-• System powiadomień dla przychodzących transakcji.
-• Widget aplikacji dla stanu konta.
+• Wyświetlanie stanu konta portfela w Worldcoin i rożnych innych walutach.
+• Wysyłanie i odbieranie Worldcoin przez NFC, kod QR albo Worldcoin URL.
+• Książka adresowa dla regularnie używanych adresów Worldcoin.
+• Możliwość dodania transakcji offline, wykonywanych po połączeniu z siecią.
+• Notyfikacje systemowe o połączeniu z siecią Worldcoin i otrzymanych monetach.
+• Widget na stan konta Worldcoin.
 
-Dowiedz się więcej o Bitcoin
-http://bitcoin.org
+Więcej o Worldcoin dowiesz się pod adresem:
+http://Worldcoinalliance.net
 
-Jeśli chcesz przyczynić się do rozwoju Bitcoin Wallet to projekt znajduje się pod adresem
-https://github.com/schildbach/bitcoin-wallet
+Jeżeli chcesz wesprzeć Worldcoin Wallet, kody źródłowe projektu znajdują się pod adresem:
+https://github.com/worldcoinproject/android-Worldcoin-wallet
 
 Licencja: GPLv3
-Używasz na własne ryzyko!
+Używanie jedynie na własne ryzyko!
 http://www.gnu.org/licenses/gpl-3.0.en.html
